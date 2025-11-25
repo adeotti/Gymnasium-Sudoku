@@ -7,7 +7,7 @@ name = "gymnasium_sudoku"
 authors = [{ name = "", email = "adeottidev@gmail.com" }]
 description = "A Sudoku environment for Reinforcement Learning research"
 
-version = "0.1.7"
+version = "0.1.8"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -32,5 +32,5 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/adeotti/Gym-Sudoku"
-Repository = "https://github.com/adeotti/Gym-Sudoku"
+Homepage = "https://github.com/adeotti/Gymnasium-Sudoku"
+Repository = "https://github.com/adeotti/Gymnasium-Sudoku"
