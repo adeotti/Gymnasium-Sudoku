@@ -9,15 +9,15 @@ from PySide6.QtGui import QIcon
 
 import gymnasium as gym
 import gymnasium.spaces as spaces
-
+from copy import deepcopy
 
 class Gui(QWidget):
-    def __init__(self ):
+    def __init__(self,board):
         super().__init__()
         self.setWindowTitle("Sudoku")
         self.setMaximumSize(20,20)
         self.setWindowIcon(QIcon("game.png"))
-        self.game = easyBoard
+        self.game = board
         self.grid = QGridLayout(self)
         self.grid.setSpacing(0)
         self.size = 9
@@ -140,11 +140,9 @@ if app is None:
 
 
 class Gym_env(gym.Env): 
-    puzzle = easyBoard
     metadata = {"render_modes": ["human"],"render_fps":60}   
     def __init__(self,render_mode = None):
         super().__init__()
-        self.gui = Gui()
         self.action = None
         self.true_action = False
         self.action_space = spaces.Tuple(
@@ -156,15 +154,15 @@ class Gym_env(gym.Env):
         )
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
 
-        self.state = self.puzzle
-        self.clone = self.state.copy()  
+        self.state = deepcopy(easyBoard)
+        self.clone = deepcopy(self.state)
+        self.gui = Gui(self.state)
         self.region = region_fn
         self.rewardfn = reward_cls 
         self.render_mode = render_mode
                 
     def reset(self,seed=None, options=None) -> np.array :
-        super().reset(seed=seed)
-        self.state = self.puzzle
+        super().reset(seed=seed) 
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):   
