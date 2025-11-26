@@ -92,47 +92,29 @@ class Gui(QWidget):
                 
                 styleList = self.cells[row][column].styleSheet().split(";")
                 styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
-                cellColor = styleDict["color"]
-        
+                cellColor = styleDict["color"] 
         return self.game
 
 
 def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
+    board = board.copy()
     x,y = index
+
     xlist = board[x]
     xlist = np.concatenate((xlist[:y],xlist[y+1:]))
+
     ylist = board[:,y]
     ylist = np.concatenate((ylist[:x],ylist[x+1:]))
     
     ix,iy = (x//n)* n , (y//n)* n
     block = board[ix:ix+n , iy:iy+n].flatten()
+    # -
     local_row = x - ix
     local_col = y - iy
     action_index = local_row * n + local_col
-    block_ = np.concatenate((block[:action_index], block[action_index+1:]))
-    return np.concatenate(([xlist,ylist,block_]))
+    block = np.delete(block,action_index)
+    return np.concatenate((xlist,ylist,block))
 
-
-class reward_cls: 
-    def __init__(self,board,action:list,region):
-        self.board = board.copy()
-        self.action = action
-        self.x,self.y,self.target = self.action
-        self.reward = 0
-        self.mask = (self.board!=0)
-        self.region = region
-                           
-    def reward_fn(self):
-        if self.mask[self.x,self.y]:
-            return 0.0 
-        self.conflicts = (self.board == 0).sum().tolist()  
-        self.unique = not np.any(self.region==self.target).item()
-        if self.unique:
-            self.reward = 1 + (self.conflicts*0.1)
-        else:
-            self.reward = - (1 + self.conflicts*0.1)
-        return round(self.reward,2)
-           
 
 app = QApplication.instance()
 if app is None:
@@ -155,28 +137,37 @@ class Gym_env(gym.Env):
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
 
         self.state = deepcopy(easyBoard)
-        self.clone = deepcopy(self.state)
+        self.mask = (self.state==0)
         self.gui = Gui(self.state)
         self.region = region_fn
-        self.rewardfn = reward_cls 
         self.render_mode = render_mode
+        self.conflicts = (self.state == 0).sum()
                 
     def reset(self,seed=None, options=None) -> np.array :
         super().reset(seed=seed) 
         return np.array(self.state,dtype=np.int32),{}
 
-    def step(self,action):   
+    def step(self,action):    
         self.action = action
         x,y,value = self.action 
-        self.clone[x][y] = value
-        region = self.region((x,y),self.clone)
-        reward = self.rewardfn(self.state,action,region).reward_fn() 
-        if reward > 0:
-            self.state[x][y] = value
-            self.true_action = True
-            self.clone = self.state
-        else:
+
+        if not self.mask[x,y]: # if target cell is not modifiable
+            reward = -2
             self.true_action = False
+            return np.array(self.state,dtype=np.int32),reward,False,False,{}
+
+        region = self.region((x,y),self.state)
+        is_unique = not np.any(region==value).item()
+
+        if is_unique: 
+            self.state[x,y] = value
+            self.mask[x,y] = True
+            self.true_action = True  
+            reward = 1
+        else:
+            reward = -1
+            self.true_action = False
+          
         info = {}
         done = False
         truncated = False
@@ -190,3 +181,5 @@ class Gym_env(gym.Env):
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
+
