@@ -1,7 +1,7 @@
 from gymnasium.envs.registration import register
 
 __all__ = ["Gym_env"]
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 
 register(
     id="sudoku-v0",
