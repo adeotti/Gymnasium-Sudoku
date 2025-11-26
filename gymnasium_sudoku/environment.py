@@ -152,7 +152,7 @@ class Gym_env(gym.Env):
         x,y,value = self.action 
 
         if not self.mask[x,y]: # if target cell is not modifiable
-            reward = -2
+            reward = -0.5
             self.true_action = False
             return np.array(self.state,dtype=np.int32),reward,False,False,{}
 
@@ -165,7 +165,7 @@ class Gym_env(gym.Env):
             self.true_action = True  
             reward = 1
         else:
-            reward = -1
+            reward = -0.5
             self.true_action = False
           
         info = {}
