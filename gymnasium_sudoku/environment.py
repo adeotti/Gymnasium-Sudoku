@@ -123,8 +123,10 @@ if app is None:
 
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60}   
-    def __init__(self,render_mode = None):
+    def __init__(self,render_mode = None,horizon = 300):
         super().__init__()
+        self.horizon = horizon
+        self.step = 0
         self.action = None
         self.true_action = False
         self.action_space = spaces.Tuple(
@@ -145,23 +147,28 @@ class Gym_env(gym.Env):
                 
     def reset(self,seed=None, options=None) -> np.array :
         super().reset(seed=seed) 
+        self.state = deepcopy(easyBoard)
+        self.step = 0
+        self.mask = (self.state == 0)
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):    
+        self.step+=1
         self.action = action
         x,y,value = self.action 
 
         if not self.mask[x,y]: # if target cell is not modifiable
             reward = -0.5
             self.true_action = False
-            return np.array(self.state,dtype=np.int32),reward,False,False,{}
+            done = True if self.step == self.horizon else False
+            return np.array(self.state,dtype=np.int32),reward,done,truncated,{}
 
         region = self.region((x,y),self.state)
         is_unique = not np.any(region==value).item()
 
         if is_unique: 
             self.state[x,y] = value
-            self.mask[x,y] = True
+            self.mask[x,y] = False
             self.true_action = True  
             reward = 1
         else:
@@ -169,9 +176,9 @@ class Gym_env(gym.Env):
             self.true_action = False
           
         info = {}
-        done = False
+        done = True if self.step == self.horizon else False
         truncated = False
-        return np.array(self.state,dtype=np.int32),reward,truncated,done,info
+        return np.array(self.state,dtype=np.int32),reward,done,truncated,info
 
     def render(self):
         if self.render_mode == "human": 
