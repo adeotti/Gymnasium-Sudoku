@@ -95,6 +95,30 @@ class Gui(QWidget):
                 cellColor = styleDict["color"] 
         return self.game
 
+    def reset(self,board):
+        self.game = board
+        for line in self.game :
+            for x in range(self.size):
+                for y in range(self.size):
+                    self.cells[x][y].setFixedSize(40,40)
+                    self.cells[x][y].setReadOnly(True)
+                    number = str(easyBoard[x][y])
+                    self.cells[x][y].setText(number)
+                    self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) 
+                    self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
+                    self.color = ("transparent" if int(self.cells[x][y].text()) == 0 else "white")
+                    self.cellStyle = [
+                        "background-color:grey;"
+                        f"border-left:{self.bl}px solid black;"
+                        f"border-top: {self.bt}px solid black;"
+                        "border-right: 1px solid black;"
+                        "border-bottom: 1px solid black;"
+                        f"color: {self.color};"
+                        "font-weight: None;"
+                        "font-size: 20px"
+                    ]
+                    self.cells[x][y].setStyleSheet("".join(self.cellStyle))
+
 
 def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
     board = board.copy()
@@ -126,7 +150,7 @@ class Gym_env(gym.Env):
     def __init__(self,render_mode = None,horizon = 300):
         super().__init__()
         self.horizon = horizon
-        self.step = 0
+        self.env_steps = 0
         self.action = None
         self.true_action = False
         self.action_space = spaces.Tuple(
@@ -148,20 +172,24 @@ class Gym_env(gym.Env):
     def reset(self,seed=None, options=None) -> np.array :
         super().reset(seed=seed) 
         self.state = deepcopy(easyBoard)
-        self.step = 0
+        self.env_steps = 0
         self.mask = (self.state == 0)
+        
+        if self.render_mode ==  "human":
+            self.gui.reset(self.state)
+
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):    
-        self.step+=1
+        self.env_steps+=1
         self.action = action
         x,y,value = self.action 
 
         if not self.mask[x,y]: # if target cell is not modifiable
             reward = -0.5
             self.true_action = False
-            done = True if self.step == self.horizon else False
-            return np.array(self.state,dtype=np.int32),reward,done,truncated,{}
+            done = True if self.env_steps == self.horizon else False
+            return np.array(self.state,dtype=np.int32),reward,done,False,{}
 
         region = self.region((x,y),self.state)
         is_unique = not np.any(region==value).item()
@@ -176,7 +204,7 @@ class Gym_env(gym.Env):
             self.true_action = False
           
         info = {}
-        done = True if self.step == self.horizon else False
+        done = True if self.env_steps == self.horizon else False
         truncated = False
         return np.array(self.state,dtype=np.int32),reward,done,truncated,info
 
@@ -188,5 +216,6 @@ class Gym_env(gym.Env):
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
 
 
