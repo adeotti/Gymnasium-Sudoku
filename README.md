@@ -1,5 +1,5 @@
 >[!warning]
-> Actively under developpement 
+>  Under active development...Expect frequent code changes....
 
 ```
 pip install gymnasium_sudoku>=0.1.10
