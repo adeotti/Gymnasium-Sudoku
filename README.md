@@ -1,7 +1,5 @@
 >[!warning]
-> Actively under developpement
-
-Usage: 
+> Actively under developpement 
 
 ```
 pip install gymnasium_sudoku>=0.1.10
@@ -20,7 +18,7 @@ for n in range(steps):
     env.render() 
 ```
 
-And for training for training : 
+And for training : 
 
 ```python
 env = gym.make("sudoku-v0",horizon=300)
