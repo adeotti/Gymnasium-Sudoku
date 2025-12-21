@@ -82,7 +82,7 @@ class Gui(QWidget):
                 self.attn_grid.addWidget(cell, x, y)
  
 
-    def updated(self,action:[int,int,int],true_value : bool = False) -> list[list[int]]: 
+    def updated(self,action:[int,int,int],true_value : bool = False,attention_weights=None) -> list[list[int]]: 
         if action is not None: 
             assert len(action) == 3
             row,column,value = action
@@ -129,6 +129,10 @@ class Gui(QWidget):
                 styleList = self.cells[row][column].styleSheet().split(";")
                 styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
                 cellColor = styleDict["color"] 
+
+                if attention_weights is not None:
+                    self.render_attention(attention_weights)
+            
         return self.game
 
     def reset(self,board):
@@ -158,16 +162,14 @@ class Gui(QWidget):
     def render_attention(self,attn):
         for i in range(self.size):
             for j in range(self.size):
-                v = a[i, j]
+                v = attn[i, j]
                 intensity = int(255 * v)
                 self.attn_cells[i][j].setStyleSheet(
                     f"""
                     background-color: rgb({intensity}, {intensity}, 255);
-                    border:none;
                     """
                 )
-
-
+      
 
 def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
     board = board.copy()
@@ -261,9 +263,12 @@ class Gym_env(gym.Env):
         truncated = False
         return np.array(self.state,dtype=np.int32),reward,done,truncated,info
 
-    def render(self):
+    def render(self,attention_weights=None):
         if self.render_mode == "human": 
-            self.state = self.gui.updated(self.action,self.true_action)
+            if attention_weights is None:
+                self.state = self.gui.updated(self.action,self.true_action)
+            else:
+                self.state = self.gui.updated(self.action,self.true_action,attention_weights)
             self.gui.show()
             app.processEvents()
             time.sleep(0.1)
