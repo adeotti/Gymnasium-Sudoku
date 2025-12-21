@@ -194,11 +194,15 @@ class Gym_env(gym.Env):
         region = self.region((x,y),self.state)
         is_unique = not np.any(region==value).item()
 
-        if is_unique: 
-            self.state[x,y] = value
-            self.mask[x,y] = False
-            self.true_action = True  
-            reward = 1
+        if is_unique:
+            if value == solution[x,y]:
+                self.state[x,y] = value
+                self.mask[x,y] = False
+                self.true_action = True  
+                reward = 1
+            else:
+                reward = -1.0
+                self.true_action = False
         else:
             reward = -0.5
             self.true_action = False
@@ -218,4 +222,15 @@ class Gym_env(gym.Env):
             sys.exit("render_mode attribute should be set to \"human\"")
 
 
+
+# DEBUB-START
+
+if __name__ == "__main__":
+    env = Gym_env(render_mode="human")
+    env.reset()
+    for n in range(2000):
+        env.step(env.action_space.sample())
+        env.render()
+
+# DEBUG-END
 
