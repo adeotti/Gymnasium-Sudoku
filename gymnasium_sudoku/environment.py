@@ -228,9 +228,8 @@ class Gym_env(gym.Env):
 if __name__ == "__main__":
     env = Gym_env(render_mode="human")
     env.reset()
-    for n in range(2000):
+    for n in range(200):
         env.step(env.action_space.sample())
         env.render()
-dgflsk
 # DEBUG-END
 
