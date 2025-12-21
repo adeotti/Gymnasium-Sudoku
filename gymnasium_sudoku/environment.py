@@ -3,14 +3,13 @@ import time,sys
 import numpy as np
 
 from PySide6 import QtCore,QtGui
-from PySide6.QtWidgets import QApplication,QWidget,QGridLayout,QLineEdit,QHBoxLayout
+from PySide6.QtWidgets import QApplication,QWidget,QGridLayout,QLineEdit
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon 
 
 import gymnasium as gym
 import gymnasium.spaces as spaces
 from copy import deepcopy
-
 
 class Gui(QWidget):
     def __init__(self,board):
@@ -19,54 +18,9 @@ class Gui(QWidget):
         self.setMaximumSize(20,20)
         self.setWindowIcon(QIcon("game.png"))
         self.game = board
-        
-        """self.main_layout = QHBoxLayout()
-
-
         self.grid = QGridLayout(self)
-        self.attn_grid = QGridLayout()
-        
-        self.main_layout.addLayout(self.grid)
-        self.main_layout.addLayout(self.attn_grid)
-
-        self.setLayout(self.main_layout)
-        """
-        self.main_layout = QHBoxLayout()
-
-        # DEBUG-START
-
-        # Sudoku grid
-        self.grid = QGridLayout()
-        self.sudoku_widget = QWidget()
-        self.sudoku_widget.setLayout(self.grid)
-
-        # Attention grid
-        self.attn_grid = QGridLayout()
-        self.attn_widget = QWidget()
-        self.attn_widget.setLayout(self.attn_grid)
-
-        self.main_layout.addWidget(self.sudoku_widget)
-        self.main_layout.addWidget(self.attn_widget)
-
-        self.setLayout(self.main_layout)
-        
-        self.grid.setVerticalSpacing(0)
-        self.grid.setHorizontalSpacing(0)
-
-        self.attn_grid.setVerticalSpacing(0)
-        self.attn_grid.setHorizontalSpacing(0)
-
-
-        #self.sudoku_widget.setContentsMargins(0, 0, 0, 0)
-        #self.attn_widget.setContentsMargins(0, 0, 0, 0)
-
-        #self.grid.setSpacing(0)
-        #self.main_layout.setStretch(0,-5)  # Sudoku
-        #self.main_layout.setStretch(0,-5)  # Attention
-        
-        # DEBUG-END
+        self.grid.setSpacing(0)
         self.size = 9
-
         self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
         for line in self.game :
             for x in range(self.size):
@@ -92,19 +46,7 @@ class Gui(QWidget):
                     self.cells[x][y].setAlignment(QtCore.Qt.AlignCenter)
                     self.grid.addWidget(self.cells[x][y],x,y)
 
-        self.attn_cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range(self.size)]
-        for x in range(self.size):
-            for y in range(self.size):
-                cell = self.attn_cells[x][y]
-                cell.setFixedSize(40,40)
-                cell.setAlignment(QtCore.Qt.AlignCenter)
-                cell.setStyleSheet(
-                    "background-color: black;"
-                    "border:none;"
-                )
-                self.attn_grid.addWidget(cell, x, y)
-
-    def updated(self,action:[int,int,int],true_value : bool = False,render_attion=None) -> list[list[int]]: 
+    def updated(self,action:[int,int,int],true_value : bool = False) -> list[list[int]]: 
         if action is not None: 
             assert len(action) == 3
             row,column,value = action
@@ -177,18 +119,6 @@ class Gui(QWidget):
                     ]
                     self.cells[x][y].setStyleSheet("".join(self.cellStyle))
 
-    def render_attention(self,attn):
-        for i in range(self.size):
-            for j in range(self.size):
-                v = a[i, j]
-                intensity = int(255 * v)
-                self.attn_cells[i][j].setStyleSheet(
-                    f"""
-                    background-color: rgb({intensity}, {intensity}, 255);
-                    border:none;
-                    """
-                )
-
 
 def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
     board = board.copy()
@@ -202,7 +132,7 @@ def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 
     
     ix,iy = (x//n)* n , (y//n)* n
     block = board[ix:ix+n , iy:iy+n].flatten()
-
+    # -
     local_row = x - ix
     local_col = y - iy
     action_index = local_row * n + local_col
@@ -217,7 +147,7 @@ if app is None:
 
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60}   
-    def __init__(self,render_mode = None,horizon = 1000):
+    def __init__(self,render_mode = None,horizon = 300):
         super().__init__()
         self.horizon = horizon
         self.env_steps = 0
@@ -247,6 +177,7 @@ class Gym_env(gym.Env):
         
         if self.render_mode ==  "human":
             self.gui.reset(self.state)
+
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):    
@@ -263,15 +194,11 @@ class Gym_env(gym.Env):
         region = self.region((x,y),self.state)
         is_unique = not np.any(region==value).item()
 
-        if is_unique:
-            if value == solution[x,y]:
-                self.state[x,y] = value
-                self.mask[x,y] = False
-                self.true_action = True  
-                reward = 1
-            else:
-                reward = -1.0
-                self.true_action = False
+        if is_unique: 
+            self.state[x,y] = value
+            self.mask[x,y] = False
+            self.true_action = True  
+            reward = 1
         else:
             reward = -0.5
             self.true_action = False
@@ -292,14 +219,3 @@ class Gym_env(gym.Env):
 
 
 
-
-# DEBUB-START
-
-if __name__ == "__main__":
-    env = Gym_env(render_mode="human")
-    env.reset()
-    for n in range(2000):
-        env.step(env.action_space.sample())
-        env.render()
-
-# DEBUG-END
