@@ -2,7 +2,7 @@
 >  Under active development...Expect frequent code changes....
 
 ```
-pip install gymnasium_sudoku>=0.1.10
+pip install gymnasium_sudoku==0.1.11
 ```
 
 ```python
