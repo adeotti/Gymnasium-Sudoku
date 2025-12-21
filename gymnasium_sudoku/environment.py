@@ -12,13 +12,14 @@ import gymnasium.spaces as spaces
 from copy import deepcopy
 
 class Gui(QWidget):
-    def __init__(self,board):
+    def __init__(self,board,rendering_attention=False):
         super().__init__()
         self.setWindowTitle("Sudoku")
         self.setMaximumSize(40,40)
         self.setWindowIcon(QIcon("game.png"))
         self.game = board
         self.size = 9
+        self.rendering_attention = rendering_attention
     
         self.main_layout = QHBoxLayout()
 
@@ -26,23 +27,10 @@ class Gui(QWidget):
         self.grid = QGridLayout()
         self.sudoku_widget = QWidget()
         self.sudoku_widget.setLayout(self.grid)
-
-        # Attention grid
-        self.attn_grid = QGridLayout()
-        self.attn_widget = QWidget()
-        self.attn_widget.setLayout(self.attn_grid)
-        
-        # - 
         self.main_layout.addWidget(self.sudoku_widget)
-        self.main_layout.addWidget(self.attn_widget)
-
-        self.setLayout(self.main_layout)
-        
         self.grid.setVerticalSpacing(0)
         self.grid.setHorizontalSpacing(0)
-
-        self.attn_grid.setVerticalSpacing(0)
-        self.attn_grid.setHorizontalSpacing(0)
+        self.grid.setContentsMargins(0,0,0,0)
 
         self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
         for line in self.game :
@@ -68,21 +56,32 @@ class Gui(QWidget):
                     self.cells[x][y].setStyleSheet("".join(self.cellStyle))
                     self.cells[x][y].setAlignment(QtCore.Qt.AlignCenter)
                     self.grid.addWidget(self.cells[x][y],x,y)
+        
+        if self.rendering_attention:
+            # Attention grid
+            self.attn_grid = QGridLayout()
+            self.attn_widget = QWidget()
+            self.attn_widget.setLayout(self.attn_grid)
+            self.main_layout.addWidget(self.attn_widget)
+            self.attn_grid.setVerticalSpacing(0)
+            self.attn_grid.setHorizontalSpacing(0)
+            self.attn_grid.setContentsMargins(0,0,0,0)
 
-        self.attn_cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range(self.size)]
-        for x in range(self.size):
-            for y in range(self.size):
-                cell = self.attn_cells[x][y]
-                cell.setFixedSize(40,40)
-                cell.setAlignment(QtCore.Qt.AlignCenter)
-                cell.setStyleSheet(
-                    "background-color: black;"
-                    "border:none;"
-                )
-                self.attn_grid.addWidget(cell, x, y)
+            self.attn_cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range(self.size)]
+            for x in range(self.size):
+                for y in range(self.size):
+                    cell = self.attn_cells[x][y]
+                    cell.setFixedSize(40,40)
+                    cell.setAlignment(QtCore.Qt.AlignCenter)
+                    cell.setStyleSheet(
+                        "background-color: black;"
+                        "border:none;"
+                    )
+                    self.attn_grid.addWidget(cell, x, y)
+
+        self.setLayout(self.main_layout)
  
-
-    def updated(self,action:[int,int,int],true_value : bool = False,attention_weights=None) -> list[list[int]]: 
+    def updated(self,action:[int,int,int],true_value:bool=False,attention_weights=None) -> list[list[int]]: 
         if action is not None: 
             assert len(action) == 3
             row,column,value = action
@@ -130,7 +129,7 @@ class Gui(QWidget):
                 styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
                 cellColor = styleDict["color"] 
 
-                if attention_weights is not None:
+                if self.rendering_attention and attention_weights is not None:
                     self.render_attention(attention_weights)
             
         return self.game
@@ -183,7 +182,7 @@ def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 
     
     ix,iy = (x//n)* n , (y//n)* n
     block = board[ix:ix+n , iy:iy+n].flatten()
-    # -
+
     local_row = x - ix
     local_col = y - iy
     action_index = local_row * n + local_col
@@ -197,9 +196,10 @@ if app is None:
 
 
 class Gym_env(gym.Env): 
-    metadata = {"render_modes": ["human"],"render_fps":60}   
-    def __init__(self,render_mode = None,horizon = 300):
+    metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
+    def __init__(self,render_mode = None,horizon = 300,rendering_attention=False):
         super().__init__()
+        self.rendering_attention = rendering_attention
         self.horizon = horizon
         self.env_steps = 0
         self.action = None
@@ -215,7 +215,7 @@ class Gym_env(gym.Env):
 
         self.state = deepcopy(easyBoard)
         self.mask = (self.state==0)
-        self.gui = Gui(self.state)
+        self.gui = Gui(self.state,self.rendering_attention)
         self.region = region_fn
         self.render_mode = render_mode
         self.conflicts = (self.state == 0).sum()
@@ -228,7 +228,6 @@ class Gym_env(gym.Env):
         
         if self.render_mode ==  "human":
             self.gui.reset(self.state)
-
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):    
@@ -265,14 +264,14 @@ class Gym_env(gym.Env):
 
     def render(self,attention_weights=None):
         if self.render_mode == "human": 
-            if attention_weights is None:
-                self.state = self.gui.updated(self.action,self.true_action)
-            else:
+            if attention_weights is not None and self.rendering_attention:
                 self.state = self.gui.updated(self.action,self.true_action,attention_weights)
+            else:
+                self.state = self.gui.updated(self.action,self.true_action)
+                
             self.gui.show()
             app.processEvents()
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
-
 
