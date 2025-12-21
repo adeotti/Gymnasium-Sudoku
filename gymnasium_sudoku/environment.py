@@ -3,7 +3,7 @@ import time,sys
 import numpy as np
 
 from PySide6 import QtCore,QtGui
-from PySide6.QtWidgets import QApplication,QWidget,QGridLayout,QLineEdit
+from PySide6.QtWidgets import QApplication,QWidget,QGridLayout,QLineEdit,QHBoxLayout
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon 
 
@@ -15,12 +15,35 @@ class Gui(QWidget):
     def __init__(self,board):
         super().__init__()
         self.setWindowTitle("Sudoku")
-        self.setMaximumSize(20,20)
+        self.setMaximumSize(40,40)
         self.setWindowIcon(QIcon("game.png"))
         self.game = board
-        self.grid = QGridLayout(self)
-        self.grid.setSpacing(0)
         self.size = 9
+    
+        self.main_layout = QHBoxLayout()
+
+        # Sudoku grid
+        self.grid = QGridLayout()
+        self.sudoku_widget = QWidget()
+        self.sudoku_widget.setLayout(self.grid)
+
+        # Attention grid
+        self.attn_grid = QGridLayout()
+        self.attn_widget = QWidget()
+        self.attn_widget.setLayout(self.attn_grid)
+        
+        # - 
+        self.main_layout.addWidget(self.sudoku_widget)
+        self.main_layout.addWidget(self.attn_widget)
+
+        self.setLayout(self.main_layout)
+        
+        self.grid.setVerticalSpacing(0)
+        self.grid.setHorizontalSpacing(0)
+
+        self.attn_grid.setVerticalSpacing(0)
+        self.attn_grid.setHorizontalSpacing(0)
+
         self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
         for line in self.game :
             for x in range(self.size):
@@ -45,6 +68,19 @@ class Gui(QWidget):
                     self.cells[x][y].setStyleSheet("".join(self.cellStyle))
                     self.cells[x][y].setAlignment(QtCore.Qt.AlignCenter)
                     self.grid.addWidget(self.cells[x][y],x,y)
+
+        self.attn_cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range(self.size)]
+        for x in range(self.size):
+            for y in range(self.size):
+                cell = self.attn_cells[x][y]
+                cell.setFixedSize(40,40)
+                cell.setAlignment(QtCore.Qt.AlignCenter)
+                cell.setStyleSheet(
+                    "background-color: black;"
+                    "border:none;"
+                )
+                self.attn_grid.addWidget(cell, x, y)
+ 
 
     def updated(self,action:[int,int,int],true_value : bool = False) -> list[list[int]]: 
         if action is not None: 
