@@ -223,7 +223,7 @@ class Gym_env(gym.Env):
 
 
 
-# DEBUB-START
+# DEBUG-START
 
 if __name__ == "__main__":
     env = Gym_env(render_mode="human")
