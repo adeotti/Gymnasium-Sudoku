@@ -155,6 +155,19 @@ class Gui(QWidget):
                     ]
                     self.cells[x][y].setStyleSheet("".join(self.cellStyle))
 
+    def render_attention(self,attn):
+        for i in range(self.size):
+            for j in range(self.size):
+                v = a[i, j]
+                intensity = int(255 * v)
+                self.attn_cells[i][j].setStyleSheet(
+                    f"""
+                    background-color: rgb({intensity}, {intensity}, 255);
+                    border:none;
+                    """
+                )
+
+
 
 def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
     board = board.copy()
