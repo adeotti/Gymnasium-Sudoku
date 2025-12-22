@@ -173,18 +173,16 @@ class Gui(QWidget):
 def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
     board = board.copy()
     x,y = index
-
     xlist = board[x]
     xlist = np.concatenate((xlist[:y],xlist[y+1:]))
-
     ylist = board[:,y]
     ylist = np.concatenate((ylist[:x],ylist[x+1:]))
     
     ix,iy = (x//n)* n , (y//n)* n
     block = board[ix:ix+n , iy:iy+n].flatten()
-
     local_row = x - ix
     local_col = y - iy
+
     action_index = local_row * n + local_col
     block = np.delete(block,action_index)
     return np.concatenate((xlist,ylist,block))
@@ -197,7 +195,7 @@ if app is None:
 
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
-    def __init__(self,render_mode = None,horizon = 300,rendering_attention=False):
+    def __init__(self,render_mode=None,horizon=100,rendering_attention=False):
         super().__init__()
         self.rendering_attention = rendering_attention
         self.horizon = horizon
@@ -236,30 +234,24 @@ class Gym_env(gym.Env):
         x,y,value = self.action 
 
         if not self.mask[x,y]: # if target cell is not modifiable
-            reward = -0.5
-            self.true_action = False
-            done = True if self.env_steps == self.horizon else False
-            return np.array(self.state,dtype=np.int32),reward,done,False,{}
-
-        region = self.region((x,y),self.state)
-        is_unique = not np.any(region==value).item()
-
-        if is_unique:
+            reward = -2 
+            self.true_action = False  
+        else:
             if value == solution[x,y]:
                 self.state[x,y] = value
                 self.mask[x,y] = False
                 self.true_action = True  
                 reward = 1
             else:
-                reward = -1.0
-                self.true_action = False
-        else:
-            reward = -0.5
-            self.true_action = False
-          
+                reward = -1
+                self.true_action = False    
+        
+        truncated = (self.env_steps>=self.horizon)
+        done = np.array_equal(self.state,solution)
+        if done:
+            reward+=20
+            
         info = {}
-        done = True if self.env_steps == self.horizon else False
-        truncated = False
         return np.array(self.state,dtype=np.int32),reward,done,truncated,info
 
     def render(self,attention_weights=None):
@@ -274,4 +266,5 @@ class Gym_env(gym.Env):
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
 
