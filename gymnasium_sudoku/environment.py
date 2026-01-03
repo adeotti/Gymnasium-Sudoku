@@ -1,5 +1,5 @@
 from gymnasium_sudoku.puzzle import easyBoard,solution
-import time,sys
+import time,sys,os
 import numpy as np
 
 from PySide6 import QtCore,QtGui
@@ -213,7 +213,8 @@ class Gym_env(gym.Env):
 
         self.state = deepcopy(easyBoard)
         self.mask = (self.state==0)
-        self.gui = Gui(self.state,self.rendering_attention)
+        self.gui = Gui(deepcopy(easyBoard),self.rendering_attention)
+        
         self.region = region_fn
         self.render_mode = render_mode
         self.conflicts = (self.state == 0).sum()
@@ -224,11 +225,13 @@ class Gym_env(gym.Env):
         self.env_steps = 0
         self.mask = (self.state == 0)
         
-        if self.render_mode ==  "human":
-            self.gui.reset(self.state)
+        if self.render_mode =="human":
+            self.gui.reset(deepcopy(easyBoard))
         return np.array(self.state,dtype=np.int32),{}
 
-    def step(self,action):    
+    def step(self,action):
+        assert (action[0] and action[1]) in range(9),f"x and y not in range [0,1, 2, 3, 4, 5, 6, 7, 8]"
+        assert action[-1] in range(1,10),f"cell value not in range [1, 2, 3, 4, 5, 6, 7, 8, 9]"
         self.env_steps+=1
         self.action = action
         x,y,value = self.action 
@@ -245,7 +248,7 @@ class Gym_env(gym.Env):
             else:
                 reward = -1
                 self.true_action = False    
-        
+
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,solution)
         if done:
@@ -255,16 +258,16 @@ class Gym_env(gym.Env):
         return np.array(self.state,dtype=np.int32),reward,done,truncated,info
 
     def render(self,attention_weights=None):
-        if self.render_mode == "human": 
+        if self.render_mode == "human":
+             
             if attention_weights is not None and self.rendering_attention:
                 self.state = self.gui.updated(self.action,self.true_action,attention_weights)
             else:
-                self.state = self.gui.updated(self.action,self.true_action)
+                self.gui.updated(self.action,self.true_action)
                 
             self.gui.show()
             app.processEvents()
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
-
 
