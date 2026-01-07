@@ -175,6 +175,7 @@ def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 
     x,y = index
     xlist = board[x]
     xlist = np.concatenate((xlist[:y],xlist[y+1:]))
+
     ylist = board[:,y]
     ylist = np.concatenate((ylist[:x],ylist[x+1:]))
     
@@ -182,11 +183,23 @@ def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 
     block = board[ix:ix+n , iy:iy+n].flatten()
     local_row = x - ix
     local_col = y - iy
-
     action_index = local_row * n + local_col
     block = np.delete(block,action_index)
     return np.concatenate((xlist,ylist,block))
 
+def _is_row_complete(board,x):
+    xlist = board[x]
+    return np.all(xlist!=0)
+
+def _is_col_complete(board,y):
+    ylist = board[:,y]
+    return np.all(ylist!=0)
+
+def _is_region_complete(board,x,y,n=3):
+    ix,iy = (x//n)* n , (y//n)* n
+    block = board[ix:ix+n , iy:iy+n].flatten()
+    return np.all(block!=0)
+    
 
 app = QApplication.instance()
 if app is None:
@@ -237,16 +250,16 @@ class Gym_env(gym.Env):
         x,y,value = self.action 
 
         if not self.mask[x,y]: # if target cell is not modifiable
-            reward = -2 
+            reward = -0.1 
             self.true_action = False  
         else:
             if value == solution[x,y]:
                 self.state[x,y] = value
                 self.mask[x,y] = False
                 self.true_action = True  
-                reward = 1
+                reward = 0.5
             else:
-                reward = -1
+                reward = -0.1
                 self.true_action = False    
 
         truncated = (self.env_steps>=self.horizon)
@@ -270,4 +283,5 @@ class Gym_env(gym.Env):
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
 
