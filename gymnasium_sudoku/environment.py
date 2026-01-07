@@ -258,6 +258,14 @@ class Gym_env(gym.Env):
                 self.mask[x,y] = False
                 self.true_action = True  
                 reward = 0.5
+                
+                if _is_row_comple(self.state,x):
+                    reward+= 0.5*9
+                if _is_col_complete(self.state,y):
+                    reward+= 0.5*9
+                if _is_region_complete(self.state,x,y):
+                    reward+= 0.5*9
+
             else:
                 reward = -0.1
                 self.true_action = False    
@@ -283,5 +291,7 @@ class Gym_env(gym.Env):
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
+
 
 
