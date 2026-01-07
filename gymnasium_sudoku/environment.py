@@ -92,6 +92,7 @@ class Gui(QWidget):
             cellColor = styleDict["color"]
 
             if cellColor != "white" and cellColor != "black":
+                assert value in range(1,10)
                 self.cells[row][column].setText(str(value))   # Update cell with value
                 self.game[row][column] = value                # Update grid with value
                 color = ("transparent" if not true_value else "black")
@@ -257,14 +258,14 @@ class Gym_env(gym.Env):
                 self.state[x,y] = value
                 self.mask[x,y] = False
                 self.true_action = True  
-                reward = 0.5
+                reward = 0.3
                 
-                if _is_row_comple(self.state,x):
-                    reward+= 0.5*9
+                if _is_row_complete(self.state,x):
+                    reward+= 0.3*9
                 if _is_col_complete(self.state,y):
-                    reward+= 0.5*9
+                    reward+= 0.3*9
                 if _is_region_complete(self.state,x,y):
-                    reward+= 0.5*9
+                    reward+= 0.3*9
 
             else:
                 reward = -0.1
@@ -273,10 +274,10 @@ class Gym_env(gym.Env):
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,solution)
         if done:
-            reward+=20
+            reward+=0.3*81
             
         info = {}
-        return np.array(self.state,dtype=np.int32),reward,done,truncated,info
+        return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
     def render(self,attention_weights=None):
         if self.render_mode == "human":
@@ -291,7 +292,4 @@ class Gym_env(gym.Env):
             time.sleep(0.1)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
-
-
-
 
