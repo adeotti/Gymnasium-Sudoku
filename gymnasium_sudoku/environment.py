@@ -1,5 +1,5 @@
 from gymnasium_sudoku.puzzle import easyBoard,solution
-import time,sys,os
+import time,sys,os,csv,random,torch
 import numpy as np
 
 from PySide6 import QtCore,QtGui
@@ -10,6 +10,21 @@ from PySide6.QtGui import QIcon
 import gymnasium as gym
 import gymnasium.spaces as spaces
 from copy import deepcopy
+
+
+def sudoku_board():
+    with open("./sudoku_100.csv") as file:
+        reader = csv.reader(file)
+        randomint = random.randint(1,99)
+        for n,row in enumerate(reader):
+            if n == randomint:
+                chosen_line = row
+        board,solution = chosen_line
+        board,solution = list(
+                map(lambda x:np.fromiter(x,dtype=np.int32).reshape(9,9),(board,solution))
+        )
+    return board,solution
+            
 
 class Gui(QWidget):
     def __init__(self,board,rendering_attention=False):
