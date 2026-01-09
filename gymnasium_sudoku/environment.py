@@ -279,7 +279,7 @@ class Gym_env(gym.Env):
         info = {}
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
-    def render(self,attention_weights=None):
+    def render(self,delay = 0.1,attention_weights=None):
         if self.render_mode == "human":
              
             if attention_weights is not None and self.rendering_attention:
@@ -289,7 +289,8 @@ class Gym_env(gym.Env):
                 
             self.gui.show()
             app.processEvents()
-            time.sleep(0.1)
+            time.sleep(delay)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
 
