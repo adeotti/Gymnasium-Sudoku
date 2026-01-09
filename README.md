@@ -2,7 +2,7 @@
 >  Under active development...Expect frequent code changes....
 
 ```
-pip install gymnasium_sudoku==0.1.11
+pip install gymnasium_sudoku
 ```
 
 ```python
@@ -10,7 +10,7 @@ import gymnasium_sudoku
 import gymnasium as gym
 
 env = gym.make("sudoku-v0",render_mode="human",horizon=300)
-env.reset()
+env.reset(delay=0.1) # delay param control the update rate of the gui
 steps = 100
 
 for n in range(steps):
