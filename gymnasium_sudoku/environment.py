@@ -106,11 +106,11 @@ class Gui(QWidget):
             styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
             cellColor = styleDict["color"]
 
-            if cellColor != "white" and cellColor != "black":
-                assert value in range(1,10)
+            if cellColor not in ("white","black") and value in range(1,10):
                 self.cells[row][column].setText(str(value))   # Update cell with value
                 self.game[row][column] = value                # Update grid with value
                 color = ("transparent" if not true_value else "black")
+                if color == "black": assert self.cells[row][column].text() != "0" 
                 ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
                 ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
                 updatedStyle = [
@@ -126,7 +126,7 @@ class Gui(QWidget):
                 self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color flash
 
                 def reset_style():
-                    background = "orange" if color == "black" else "grey"
+                    background = "orange" if color == "black" else "grey" 
                     normalStyle = [
                         f"background-color:{background};",
                         f"border-left:{ubl}px solid black;",
@@ -146,7 +146,7 @@ class Gui(QWidget):
                 cellColor = styleDict["color"] 
 
                 if self.rendering_attention and attention_weights is not None:
-                    self.render_attention(attention_weights)
+                    self.render_attention(attention_weights) 
             
         return self.game
 
@@ -294,21 +294,19 @@ class Gym_env(gym.Env):
         info = {}
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
-    def render(self,delay = 0.1,attention_weights=None):
+    def render(self,delay:float=0.1,attention_weights=None):
         if self.render_mode == "human":
-             
+            self.gui.show()
+        
             if attention_weights is not None and self.rendering_attention:
-                self.state = self.gui.updated(self.action,self.true_action,attention_weights)
+                self.gui.updated(self.action,self.true_action,attention_weights)
             else:
                 self.gui.updated(self.action,self.true_action)
-                
-            self.gui.show()
+            
             app.processEvents()
             time.sleep(delay)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
 
 
-
-
-
+        
