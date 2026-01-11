@@ -1,4 +1,3 @@
-from gymnasium_sudoku.puzzle import easyBoard,solution
 import time,sys,os,csv,random,torch
 import numpy as np
 
@@ -47,13 +46,14 @@ class Gui(QWidget):
         self.grid.setHorizontalSpacing(0)
         self.grid.setContentsMargins(0,0,0,0)
 
+
         self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
         for line in self.game :
             for x in range(self.size):
                 for y in range(self.size):
                     self.cells[x][y].setFixedSize(40,40)
                     self.cells[x][y].setReadOnly(True)
-                    number = str(easyBoard[x][y])
+                    number = str(board[x][y])
                     self.cells[x][y].setText(number)
                     self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) # what is bl,bt ? 
                     self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
@@ -157,7 +157,7 @@ class Gui(QWidget):
                 for y in range(self.size):
                     self.cells[x][y].setFixedSize(40,40)
                     self.cells[x][y].setReadOnly(True)
-                    number = str(easyBoard[x][y])
+                    number = str(board[x][y])
                     self.cells[x][y].setText(number)
                     self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) 
                     self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
@@ -239,23 +239,23 @@ class Gym_env(gym.Env):
             )
         )
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
-
-        self.state = deepcopy(easyBoard)
+        
+        self.state,self.solution = deepcopy(sudoku_board())
         self.mask = (self.state==0)
-        self.gui = Gui(deepcopy(easyBoard),self.rendering_attention)
+        self.gui = Gui(deepcopy(self.state),self.rendering_attention)
         
         self.region = region_fn
         self.render_mode = render_mode
         self.conflicts = (self.state == 0).sum()
                 
     def reset(self,seed=None, options=None) -> np.array :
-        super().reset(seed=seed) 
-        self.state = deepcopy(easyBoard)
+        super().reset(seed=seed)
+        self.state,self.solution = deepcopy(sudoku_board())
         self.env_steps = 0
         self.mask = (self.state == 0)
         
         if self.render_mode =="human":
-            self.gui.reset(deepcopy(easyBoard))
+            self.gui.reset(deepcopy(self.state))
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):
@@ -269,7 +269,7 @@ class Gym_env(gym.Env):
             reward = -0.1 
             self.true_action = False  
         else:
-            if value == solution[x,y]:
+            if value == self.solution[x,y]:
                 self.state[x,y] = value
                 self.mask[x,y] = False
                 self.true_action = True  
@@ -287,7 +287,7 @@ class Gym_env(gym.Env):
                 self.true_action = False    
 
         truncated = (self.env_steps>=self.horizon)
-        done = np.array_equal(self.state,solution)
+        done = np.array_equal(self.state,self.solution)
         if done:
             reward+=0.3*81
             
@@ -307,5 +307,8 @@ class Gym_env(gym.Env):
             time.sleep(delay)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
+
+
 
 
