@@ -1,4 +1,5 @@
 import time,sys,os,csv,random,torch
+from puzzle import tb_1,ts_1
 import numpy as np
 
 from PySide6 import QtCore,QtGui
@@ -26,12 +27,13 @@ def sudoku_board():
             
 
 class Gui(QWidget):
-    def __init__(self,board,rendering_attention=False):
+    def __init__(self,board,solution,rendering_attention=False):
         super().__init__()
         self.setWindowTitle("Sudoku")
         self.setMaximumSize(40,40)
         self.setWindowIcon(QIcon("game.png"))
         self.game = board
+        self.solution = solution
         self.size = 9
         self.rendering_attention = rendering_attention
     
@@ -57,7 +59,7 @@ class Gui(QWidget):
                     self.cells[x][y].setText(number)
                     self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) # what is bl,bt ? 
                     self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
-                    self.color = ("transparent" if int(self.cells[x][y].text()) == 0 else "white")
+                    self.color =("transparent" if int(self.cells[x][y].text()) == 0 else "white")
                     self.cellStyle = [
                         "background-color:grey;"
                         f"border-left:{self.bl}px solid black;"
@@ -126,7 +128,7 @@ class Gui(QWidget):
                 self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color flash
 
                 def reset_style():
-                    background = "orange" if color == "black" and true_value else "grey" 
+                    background = "orange" if color == "black" else "grey" 
                     normalStyle = [
                         f"background-color:{background};",
                         f"border-left:{ubl}px solid black;",
@@ -146,14 +148,14 @@ class Gui(QWidget):
                 cellColor = styleDict["color"] 
 
                 if self.rendering_attention and attention_weights is not None:
-                    self.render_attention(attention_weights) 
-            
+                    self.render_attention(attention_weights)  
         return self.game
 
     def reset(self,board):
         self.game = board
         for line in self.game :
             for x in range(self.size):
+                
                 for y in range(self.size):
                     self.cells[x][y].setFixedSize(40,40)
                     self.cells[x][y].setReadOnly(True)
@@ -224,7 +226,7 @@ if app is None:
 
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
-    def __init__(self,render_mode=None,horizon=100,rendering_attention=False):
+    def __init__(self,render_mode=None,horizon=100,eval_mode:bool=False,rendering_attention=False):
         super().__init__()
         self.rendering_attention = rendering_attention
         self.horizon = horizon
@@ -239,8 +241,14 @@ class Gym_env(gym.Env):
             )
         )
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
+        self.eval_mode = eval_mode
         
-        self.state,self.solution = deepcopy(sudoku_board())
+        if self.eval_mode:
+            self.state = deepcopy(tb_1)
+            self.solution = deepcopy(ts_1)
+        else:
+            self.state,self.solution = deepcopy(sudoku_board())
+        
         self.mask = (self.state==0)
         self.gui = Gui(deepcopy(self.state),self.rendering_attention)
         
@@ -250,7 +258,12 @@ class Gym_env(gym.Env):
                 
     def reset(self,seed=None, options=None) -> np.array :
         super().reset(seed=seed)
-        self.state,self.solution = deepcopy(sudoku_board())
+
+        if self.eval_mode:
+            self.state = deepcopy(tb_1)
+            self.solution = deepcopy(ts_1)
+        else:
+            self.state,self.solution = deepcopy(sudoku_board())
         self.env_steps = 0
         self.mask = (self.state == 0)
         
@@ -311,12 +324,3 @@ class Gym_env(gym.Env):
 
     
 
-if __name__=="__main__":
-    env = Gym_env(render_mode="human",horizon=100)
-    env.reset()
-    for n in range(600000):
-        obs,reward,done,trunc,info = env.step(env.action_space.sample())
-        env.render(delay=0.001)
-        if done:
-            time.sleep(10)
-            env.reset()
