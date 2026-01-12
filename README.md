@@ -9,8 +9,14 @@ pip install gymnasium_sudoku
 import gymnasium_sudoku
 import gymnasium as gym
 
-env = gym.make("sudoku-v0",render_mode="human",horizon=150,eval_mode=True)
-env.reset(delay=0.1) # delay param control the update rate of the gui
+env = gym.make(
+        "sudoku-v0",
+        render_mode="human",
+        horizon=150,
+        render_delay=0.01, # delay the gui update rate
+        eval_mode=True
+    )
+env.reset() 
 steps = 100
 
 for n in range(steps):
@@ -18,13 +24,16 @@ for n in range(steps):
     env.render() 
 ```
 
-And for training : 
+And for training: 
 
 ```python
 env = gym.make("sudoku-v0",horizon=150,eval_mode=False)
 # It is better not to call .render() during training 
 ```
 
+`Observation space`: The state returned after each `.reset()` or `.step()` is a raw sudoku board shape `[9,9]`.This observation can be converted into an image when training a ConvNet, for example.
+
+`Action space`: The action space is shaped `[x,y,z]`,representing : x = row position of the cell, y = column position of the cell and value that should go into that cell.When vectorizing, the current version of the environment do not handle action reshaping, so for n environments, the action space should be shaped : `[[x0...xn],[y0...yn],[z0...zn]]`
 
 By default, `eval_mode` is set to `False`, this is good for training since after each reset() call,the Sudoku board will be changed to add more diversity to the training data and try to prevent memorization, so that the policy learns a more general distribution...At least that is the intuition.
 
