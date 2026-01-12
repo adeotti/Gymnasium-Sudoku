@@ -307,7 +307,11 @@ class Gym_env(gym.Env):
         info = {}
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
+<<<<<<< HEAD
     def render(self,delay:float=0.1,attention_weights=None):
+=======
+    def render(self):
+>>>>>>> bd36e0a (update)
         if self.render_mode == "human":
             self.gui.show()
         
