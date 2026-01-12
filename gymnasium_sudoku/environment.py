@@ -1,5 +1,5 @@
 import time,sys,os,csv,random,torch
-from puzzle import tb_1,ts_1
+from gymnasium_sudoku.puzzle import tb_1,ts_1
 import numpy as np
 
 from PySide6 import QtCore,QtGui
@@ -226,10 +226,20 @@ if app is None:
 
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
-    def __init__(self,render_mode=None,horizon=100,eval_mode:bool=False,rendering_attention=False):
+    def __init__(self,
+                 render_mode=None,
+                 horizon=100,
+                 eval_mode:bool=False,
+                 self.render_delay:float=0.1
+                 rendering_attention=False
+        ):
         super().__init__()
-        self.rendering_attention = rendering_attention
+        self.render_mode = render_mode
         self.horizon = horizon
+        self.eval_mode = eval_mode
+        self.render_delay = render_delay
+        self.rendering_attention = rendering_attention
+
         self.env_steps = 0
         self.action = None
         self.true_action = False
@@ -241,8 +251,7 @@ class Gym_env(gym.Env):
             )
         )
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
-        self.eval_mode = eval_mode
-        
+     
         if self.eval_mode:
             self.state = deepcopy(tb_1)
             self.solution = deepcopy(ts_1)
@@ -251,9 +260,7 @@ class Gym_env(gym.Env):
         
         self.mask = (self.state==0)
         self.gui = Gui(deepcopy(self.state),self.rendering_attention)
-        
         self.region = region_fn
-        self.render_mode = render_mode
         self.conflicts = (self.state == 0).sum()
                 
     def reset(self,seed=None, options=None) -> np.array :
@@ -294,7 +301,6 @@ class Gym_env(gym.Env):
                     reward+= 0.3*9
                 if _is_region_complete(self.state,x,y):
                     reward+= 0.3*9
-
             else:
                 reward = -0.1
                 self.true_action = False    
@@ -307,11 +313,7 @@ class Gym_env(gym.Env):
         info = {}
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
-<<<<<<< HEAD
-    def render(self,delay:float=0.1,attention_weights=None):
-=======
     def render(self):
->>>>>>> bd36e0a (update)
         if self.render_mode == "human":
             self.gui.show()
         
@@ -321,7 +323,7 @@ class Gym_env(gym.Env):
                 self.gui.updated(self.action,self.true_action)
             
             app.processEvents()
-            time.sleep(delay)
+            time.sleep(self.render_delay)
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
 
