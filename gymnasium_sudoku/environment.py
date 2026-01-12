@@ -126,7 +126,7 @@ class Gui(QWidget):
                 self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color flash
 
                 def reset_style():
-                    background = "orange" if color == "black" else "grey" 
+                    background = "orange" if color == "black" and true_value else "grey" 
                     normalStyle = [
                         f"background-color:{background};",
                         f"border-left:{ubl}px solid black;",
@@ -309,4 +309,14 @@ class Gym_env(gym.Env):
             sys.exit("render_mode attribute should be set to \"human\"")
 
 
-        
+    
+
+if __name__=="__main__":
+    env = Gym_env(render_mode="human",horizon=100)
+    env.reset()
+    for n in range(600000):
+        obs,reward,done,trunc,info = env.step(env.action_space.sample())
+        env.render(delay=0.001)
+        if done:
+            time.sleep(10)
+            env.reset()
