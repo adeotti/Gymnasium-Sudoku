@@ -14,12 +14,13 @@ env = gym.make(
     )
 
 env.reset()
+steps = int(6e3*5) 
 
-for n in range(int(6e3*5)):
+for n in tqdm(range(steps),total=steps):
     obs,reward,done,trunc,info = env.step(env.action_space.sample())
     env.render()
     if done:
-        print(obs)
+        print(f"\n{obs}")
         assert np.all(obs!=0)
 
         if env.unwrapped.eval_mode:
