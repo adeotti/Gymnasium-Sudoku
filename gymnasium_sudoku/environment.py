@@ -13,7 +13,7 @@ from copy import deepcopy
 
 
 def sudoku_board():
-    with open("./sudoku_100.csv") as file:
+    with open("./gymnasium_sudoku/sudoku_100.csv") as file:
         reader = csv.reader(file)
         randomint = random.randint(1,99)
         for n,row in enumerate(reader):
@@ -230,7 +230,7 @@ class Gym_env(gym.Env):
                  render_mode=None,
                  horizon=100,
                  eval_mode:bool=False,
-                 self.render_delay:float=0.1
+                 render_delay:float=0.1,
                  rendering_attention=False
         ):
         super().__init__()
@@ -316,12 +316,11 @@ class Gym_env(gym.Env):
     def render(self):
         if self.render_mode == "human":
             self.gui.show()
-        
-            if attention_weights is not None and self.rendering_attention:
-                self.gui.updated(self.action,self.true_action,attention_weights)
-            else:
-                self.gui.updated(self.action,self.true_action)
-            
+
+            #if attention_weights is not None and self.rendering_attention:
+                #self.gui.updated(self.action,self.true_action,attention_weights)
+            #else:
+            self.gui.updated(self.action,self.true_action)
             app.processEvents()
             time.sleep(self.render_delay)
         else :
