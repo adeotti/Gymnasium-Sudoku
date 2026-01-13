@@ -37,8 +37,6 @@ dependencies = [
 Homepage = "https://github.com/adeotti/Gymnasium-Sudoku"
 Repository = "https://github.com/adeotti/Gymnasium-Sudoku"
 
-
-
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["venv*", "test*", "tests*", "*.egg-info", "dist", "build"]
