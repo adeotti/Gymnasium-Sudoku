@@ -1,5 +1,4 @@
 import time,sys,os,csv,random,torch
-#from gymnasium_sudoku.puzzle import tb_1,ts_1
 import numpy as np
 
 from PySide6 import QtCore,QtGui
@@ -34,7 +33,6 @@ class Gui(QWidget):
         self.grid.setVerticalSpacing(0)
         self.grid.setHorizontalSpacing(0)
         self.grid.setContentsMargins(0,0,0,0)
-
 
         self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
         for line in self.game :
@@ -254,12 +252,12 @@ class Gym_env(gym.Env):
      
         if self.eval_mode:
             line_pick = random.randint(0,49)
-            self.csv_path = Path(__file__).parent/"sudoku_50_tests.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path,line_pick))
+            self.csv_path_test = Path(__file__).parent/"sudoku_50_tests.csv"
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_test,line_pick))
         else:
-            line_range = random.randint(1,100)
-            self.csv_path = Path(__file__).parent/"sudoku_100.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path,line_pick))
+            line_pick = random.randint(1,100)
+            self.csv_path_train = Path(__file__).parent/"sudoku_100.csv"
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_train,line_pick))
             
         self.mask = (self.state==0)
         self.gui = Gui(deepcopy(self.state),self.rendering_attention)
@@ -270,12 +268,16 @@ class Gym_env(gym.Env):
         super().reset(seed=seed)
 
         if self.eval_mode:
-            self.state = deepcopy(tb_1)
-            self.solution = deepcopy(ts_1)
+            line_pick = random.randint(0,49)
+            self.csv_path_test = Path(__file__).parent/"sudoku_50_tests.csv"
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_test,line_pick))
         else:
-            self.state,self.solution = deepcopy(sudoku_board())
+            line_pick = random.randint(1,100)
+            self.csv_path_train = Path(__file__).parent/"sudoku_100.csv"
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_train,line_pick))
+
         self.env_steps = 0
-        self.mask = (self.state == 0)
+        self.mask = (self.state==0)
         
         if self.render_mode =="human":
             self.gui.reset(deepcopy(self.state))
@@ -329,6 +331,4 @@ class Gym_env(gym.Env):
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
 
-
-    
 
