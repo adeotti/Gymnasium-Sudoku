@@ -230,6 +230,17 @@ def _sudoku_board(csv_path,line_pick):
         )
     return board,solution
 
+def _gen_board(eval_mode):
+    if eval_mode:
+        line_pick = random.randint(0,49)
+        csv_path_test = Path(__file__).parent/"sudoku_50_tests.csv"
+        state,solution = deepcopy(_sudoku_board(csv_path_test,line_pick))
+    else:
+        line_pick = random.randint(1,100)
+        csv_path_train = Path(__file__).parent/"sudoku_100.csv"
+        state,solution = deepcopy(_sudoku_board(csv_path_train,line_pick))
+    return state,solution
+
 
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
@@ -258,16 +269,7 @@ class Gym_env(gym.Env):
             )
         )
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
-     
-        if self.eval_mode:
-            line_pick = random.randint(0,49)
-            self.csv_path_test = Path(__file__).parent/"sudoku_50_tests.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_test,line_pick))
-        else:
-            line_pick = random.randint(1,100)
-            self.csv_path_train = Path(__file__).parent/"sudoku_100.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_train,line_pick))
-            
+        self.state,self.solution = _gen_board(self.eval_mode)
         self.mask = (self.state==0)
         self.gui = Gui(deepcopy(self.state),self.rendering_attention)
         self.region = region_fn
@@ -276,15 +278,7 @@ class Gym_env(gym.Env):
     def reset(self,seed=None, options=None) -> np.array :
         super().reset(seed=seed)
 
-        if self.eval_mode:
-            line_pick = random.randint(0,49)
-            self.csv_path_test = Path(__file__).parent/"sudoku_50_tests.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_test,line_pick))
-        else:
-            line_pick = random.randint(1,100)
-            self.csv_path_train = Path(__file__).parent/"sudoku_100.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path_train,line_pick))
-
+        self.state,self.solution = _gen_board(self.eval_mode)
         self.env_steps = 0
         self.mask = (self.state==0)
         
@@ -318,7 +312,7 @@ class Gym_env(gym.Env):
                     reward+= 0.3*9
             else:
                 reward = -0.1
-                self.true_action = False    truncated
+                self.true_action = False
 
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,self.solution)
