@@ -2,14 +2,13 @@ import gymnasium_sudoku
 import gymnasium as gym
 import time,sys
 import numpy as np
-from gymnasium_sudoku.puzzle import tb_1,ts_1
 from tqdm import tqdm
 
 env = gym.make(
         "sudoku-v0",
         render_mode="human",
         horizon=150,
-        render_delay=0.01,
+        render_delay=0.0,
         eval_mode=True
     )
 
@@ -27,11 +26,11 @@ for n in tqdm(range(total_steps),total=total_steps):
         assert np.all(obs!=0)
 
         if env.unwrapped.eval_mode:
-            assert np.array_equal(obs,ts_1)
+            assert np.array_equal(obs,env.unwrapped.solution)
         elif not env.unwrapped.eval_mode:
             assert np.array_equal(obs,env.unwrapped.solution)
         
-        time.sleep(5) # delay the board reset
+        time.sleep(2) # delay the board reset
         
         env.reset()
         steps = 0
