@@ -211,12 +211,11 @@ if app is None:
     app = QApplication([])
 
 
-def sudoku_board(csv_path): 
+def sudoku_board(csv_path,line_pick): 
     with open(csv_path) as file:
         reader = csv.reader(file)
-        randomint = random.randint(1,99)
         for n,row in enumerate(reader):
-            if n == randomint:
+            if n == line_pick:
                 chosen_line = row
         board,solution = chosen_line
         board,solution = list(
@@ -254,11 +253,13 @@ class Gym_env(gym.Env):
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
      
         if self.eval_mode:
+            line_pick = random.randint(0,49)
             self.csv_path = Path(__file__).parent/"sudoku_50_tests.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path))
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path,line_pick))
         else:
+            line_range = random.randint(1,100)
             self.csv_path = Path(__file__).parent/"sudoku_100.csv"
-            self.state,self.solution = deepcopy(sudoku_board(self.csv_path))
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path,line_pick))
             
         self.mask = (self.state==0)
         self.gui = Gui(deepcopy(self.state),self.rendering_attention)
