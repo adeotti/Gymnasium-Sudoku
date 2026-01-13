@@ -1,5 +1,5 @@
 import time,sys,os,csv,random,torch
-from gymnasium_sudoku.puzzle import tb_1,ts_1
+#from gymnasium_sudoku.puzzle import tb_1,ts_1
 import numpy as np
 
 from PySide6 import QtCore,QtGui
@@ -12,21 +12,6 @@ import gymnasium.spaces as spaces
 from copy import deepcopy
 from pathlib import Path
 
-
-def sudoku_board():
-    csv_path = Path(__file__).parent/"sudoku_100.csv"
-    with open(csv_path) as file:
-        reader = csv.reader(file)
-        randomint = random.randint(1,99)
-        for n,row in enumerate(reader):
-            if n == randomint:
-                chosen_line = row
-        board,solution = chosen_line
-        board,solution = list(
-                map(lambda x:np.fromiter(x,dtype=np.int32).reshape(9,9),(board,solution))
-        )
-    return board,solution
-            
 
 class Gui(QWidget):
     def __init__(self,board,solution,rendering_attention=False):
@@ -226,6 +211,20 @@ if app is None:
     app = QApplication([])
 
 
+def sudoku_board(csv_path): 
+    with open(csv_path) as file:
+        reader = csv.reader(file)
+        randomint = random.randint(1,99)
+        for n,row in enumerate(reader):
+            if n == randomint:
+                chosen_line = row
+        board,solution = chosen_line
+        board,solution = list(
+                map(lambda x:np.fromiter(x,dtype=np.int32).reshape(9,9),(board,solution))
+        )
+    return board,solution
+
+
 class Gym_env(gym.Env): 
     metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
     def __init__(self,
@@ -255,11 +254,12 @@ class Gym_env(gym.Env):
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
      
         if self.eval_mode:
-            self.state = deepcopy(tb_1)
-            self.solution = deepcopy(ts_1)
+            self.csv_path = Path(__file__).parent/"sudoku_50_tests.csv"
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path))
         else:
-            self.state,self.solution = deepcopy(sudoku_board())
-        
+            self.csv_path = Path(__file__).parent/"sudoku_100.csv"
+            self.state,self.solution = deepcopy(sudoku_board(self.csv_path))
+            
         self.mask = (self.state==0)
         self.gui = Gui(deepcopy(self.state),self.rendering_attention)
         self.region = region_fn
