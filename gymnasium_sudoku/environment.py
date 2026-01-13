@@ -82,8 +82,10 @@ class Gui(QWidget):
                     self.attn_grid.addWidget(cell, x, y)
 
         self.setLayout(self.main_layout)
+
  
-    def updated(self,action:[int,int,int],true_value:bool=False,attention_weights=None) -> list[list[int]]: 
+    def updated(self,action:[int,int,int],true_value:bool=False,update_delay:float=1.0,attention_weights=None) -> list[list[int]]: 
+
         if action is not None: 
             assert len(action) == 3
             row,column,value = action
@@ -92,14 +94,20 @@ class Gui(QWidget):
                 del styleList[-1]
             styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
             cellColor = styleDict["color"]
-
+            
+            ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
+            ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
+      
             if cellColor not in ("white","black") and value in range(1,10):
-                self.cells[row][column].setText(str(value))   # Update cell with value
-                self.game[row][column] = value                # Update grid with value
-                color = ("transparent" if not true_value else "black")
-                if color == "black": assert self.cells[row][column].text() != "0" 
-                ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
-                ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
+                
+                if true_value: 
+                    self.cells[row][column].setText(str(value))   # Update cell with value
+                    assert self.cells[row][column].text() != str(0)
+                    self.game[row][column] = value                # Update grid with value 
+                    color = "black"
+                else:
+                    color = "transparent"
+                
                 updatedStyle = [
                     "background-color:dark grey;"
                     f"border-left:{ubl}px solid black;"
@@ -110,7 +118,7 @@ class Gui(QWidget):
                     "font-weight: None;"
                     "font-size: 20px"
                 ]
-                self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color flash
+                self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color
 
                 def reset_style():
                     background = "orange" if color == "black" else "grey" 
@@ -125,15 +133,16 @@ class Gui(QWidget):
                         "font-size: 20px;"
                     ]
                     self.cells[row][column].setStyleSheet("".join(normalStyle)) 
-
-                QTimer.singleShot(20, reset_style)  # Delay in milliseconds
                 
-                styleList = self.cells[row][column].styleSheet().split(";")
-                styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
-                cellColor = styleDict["color"] 
+                
+                if (self.game==0).sum() > 1 and not true_value:
+                    QTimer.singleShot(update_delay, reset_style)  
+                else:
+                    QTimer.singleShot(0, reset_style)  
 
                 if self.rendering_attention and attention_weights is not None:
                     self.render_attention(attention_weights)  
+
         return self.game
 
     def reset(self,board):
@@ -209,7 +218,7 @@ if app is None:
     app = QApplication([])
 
 
-def sudoku_board(csv_path,line_pick): 
+def _sudoku_board(csv_path,line_pick): 
     with open(csv_path) as file:
         reader = csv.reader(file)
         for n,row in enumerate(reader):
@@ -284,8 +293,8 @@ class Gym_env(gym.Env):
         return np.array(self.state,dtype=np.int32),{}
 
     def step(self,action):
-        assert (action[0] and action[1]) in range(9),f"x and y not in range [0,1, 2, 3, 4, 5, 6, 7, 8]"
-        assert action[-1] in range(1,10),f"cell value not in range [1, 2, 3, 4, 5, 6, 7, 8, 9]"
+        assert (action[0] and action[1]) in range(9),f"x and y not in range [0,9]"
+        
         self.env_steps+=1
         self.action = action
         x,y,value = self.action 
@@ -297,6 +306,7 @@ class Gym_env(gym.Env):
             if value == self.solution[x,y]:
                 self.state[x,y] = value
                 self.mask[x,y] = False
+                assert action[-1] in range(1,10),f"cell value not in range [1,9]"
                 self.true_action = True  
                 reward = 0.3
                 
@@ -308,7 +318,7 @@ class Gym_env(gym.Env):
                     reward+= 0.3*9
             else:
                 reward = -0.1
-                self.true_action = False    
+                self.true_action = False    truncated
 
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,self.solution)
@@ -321,14 +331,15 @@ class Gym_env(gym.Env):
     def render(self):
         if self.render_mode == "human":
             self.gui.show()
-
+            
+            # TODO : Implement attention weights rendering
             #if attention_weights is not None and self.rendering_attention:
                 #self.gui.updated(self.action,self.true_action,attention_weights)
             #else:
-            self.gui.updated(self.action,self.true_action)
-            app.processEvents()
-            time.sleep(self.render_delay)
+            self.gui.updated(self.action,self.true_action,self.render_delay)
+            app.processEvents() 
         else :
             sys.exit("render_mode attribute should be set to \"human\"")
+
 
 
