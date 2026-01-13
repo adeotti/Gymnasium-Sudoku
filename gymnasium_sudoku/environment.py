@@ -10,10 +10,12 @@ from PySide6.QtGui import QIcon
 import gymnasium as gym
 import gymnasium.spaces as spaces
 from copy import deepcopy
+from pathlib import Path
 
 
 def sudoku_board():
-    with open("./gymnasium_sudoku/sudoku_100.csv") as file:
+    csv_path = Path(__file__).parent/"sudoku_100.csv"
+    with open(csv_path) as file:
         reader = csv.reader(file)
         randomint = random.randint(1,99)
         for n,row in enumerate(reader):
