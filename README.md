@@ -18,12 +18,12 @@ for n in range(int(6e3)):
     env.step(env.action_space.sample())
     env.render() 
 ```
-* **Eval mode/Training mode :** By default, `eval_mode` in the init method is set to `False`, this is for training where the envrionment will be reseted with 100 differents boards after each .reset() calls.During testing, `eval_mode` should be set to `True` to test on board never seen during the training phase.The booards using during training and test are in separate csv files : sudoku_100.csv and sudoku_50.scv (100 boards in the training file and 50 in the test file)
+**Eval mode/Training mode :** By default, `eval_mode` in the init method is set to `False`, this is for training where the envrionment will be reseted with 100 differents boards after each .reset() calls.During testing, `eval_mode` should be set to `True` to test on board never seen during the training phase.The booards using during training and test are in separate csv files : sudoku_100.csv and sudoku_50.scv (100 boards in the training file and 50 in the test file)
 
-* **Bias :**
+**Bias :**
 Among the induced biases that immensely help guide that learning is the fact that the policy cannot modify a cell that was already correctly filled, on top of the existing untouchable cells present in the beginning.
 
-* **Measuring learning for this version of the environment:*** The current structure of the environment allows a completely random policy to solve it (this is true for easy boards in the current version of the environment), so a good way to measure learning might be to use the number of steps over N episodes under a random policy as a `baseline`. This implies that a policy able to consistently solve the test boards in fewer steps over the same N episodes used to run a random policy is, in theory, displaying some sort of learning.
+**Measuring learning for this version of the environment:*** The current structure of the environment allows a completely random policy to solve it (this is true for easy boards in the current version of the environment), so a good way to measure learning might be to use the number of steps over N episodes under a random policy as a `baseline`. This implies that a policy able to consistently solve the test boards in fewer steps over the same N episodes used to run a random policy is, in theory, displaying some sort of learning.
 
 
 ### Sudoku-v1
