@@ -1,14 +1,16 @@
-* **Observation space :** The state returned after each `.reset()` or `.step()` is a raw sudoku board shape `[9,9]`.This observation can be converted into an image.
+**Observation space :** The state returned after each `.reset()` or `.step()` is a raw sudoku board shape `[9,9]`.This observation can be converted into an image.
 
-* **Action space:** The action space is shaped `[x,y,z]`,representing : x = row position of the cell, y = column position of the cell and value that should go into that cell.When vectorizing, the current version of the environment do not handle action reshaping, so for n environments, the action's shape should be : `[[x0...xn],[y0...yn],[z0...zn]]`
+**Action space:** The action space is shaped `[x,y,z]`,representing : x = row position of the cell, y = column position of the cell and value that should go into that cell.When vectorizing, the current version of the environment do not handle action reshaping, so for n environments, the action's shape should be : `[[x0...xn],[y0...yn],[z0...zn]]`
 
 
 ### Sudoku-v0 (biased version)
 The latest version of this environment is 0.2.3
 
-* **Installation :**
-```python
-import gymnasium_sudoku<=0.2.3
+**Installation :**
+```
+pip install gymnasium_sudoku<=0.2.3
+```
+```python 
 import gymnasium as gym
 
 env = gym.make("sudoku-v0",render_mode="human",horizon=150,render_delay=1.0,eval_mode=True)
