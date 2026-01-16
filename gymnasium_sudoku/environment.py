@@ -1,188 +1,15 @@
-import time,sys,os,csv,random,torch
+import csv,random
 import numpy as np
-
-from PySide6 import QtCore,QtGui
-from PySide6.QtWidgets import QApplication,QWidget,QGridLayout,QLineEdit,QHBoxLayout
-from PySide6.QtCore import QTimer
-from PySide6.QtGui import QIcon 
-
 import gymnasium as gym
 import gymnasium.spaces as spaces
+
+from PySide6.QtWidgets import QApplication
+from gymnasium_sudoku.rendering import Gui
 from copy import deepcopy
 from pathlib import Path
 
-
-class Gui(QWidget):
-    def __init__(self,board,solution,rendering_attention=False):
-        super().__init__()
-        self.setWindowTitle("Sudoku")
-        self.setMaximumSize(40,40)
-        self.setWindowIcon(QIcon("game.png"))
-        self.game = board
-        self.solution = solution
-        self.size = 9
-        self.rendering_attention = rendering_attention
-    
-        self.main_layout = QHBoxLayout()
-
-        # Sudoku grid
-        self.grid = QGridLayout()
-        self.sudoku_widget = QWidget()
-        self.sudoku_widget.setLayout(self.grid)
-        self.main_layout.addWidget(self.sudoku_widget)
-        self.grid.setVerticalSpacing(0)
-        self.grid.setHorizontalSpacing(0)
-        self.grid.setContentsMargins(0,0,0,0)
-
-        self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
-        for line in self.game :
-            for x in range(self.size):
-                for y in range(self.size):
-                    self.cells[x][y].setFixedSize(40,40)
-                    self.cells[x][y].setReadOnly(True)
-                    number = str(board[x][y])
-                    self.cells[x][y].setText(number)
-                    self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) # what is bl,bt ? 
-                    self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
-                    self.color =("transparent" if int(self.cells[x][y].text()) == 0 else "white")
-                    self.cellStyle = [
-                        "background-color:grey;"
-                        f"border-left:{self.bl}px solid black;"
-                        f"border-top: {self.bt}px solid black;"
-                        "border-right: 1px solid black;"
-                        "border-bottom: 1px solid black;"
-                        f"color: {self.color};"
-                        "font-weight: None;"
-                        "font-size: 20px"
-                    ]
-                    self.cells[x][y].setStyleSheet("".join(self.cellStyle))
-                    self.cells[x][y].setAlignment(QtCore.Qt.AlignCenter)
-                    self.grid.addWidget(self.cells[x][y],x,y)
-        
-        if self.rendering_attention:
-            # Attention grid
-            self.attn_grid = QGridLayout()
-            self.attn_widget = QWidget()
-            self.attn_widget.setLayout(self.attn_grid)
-            self.main_layout.addWidget(self.attn_widget)
-            self.attn_grid.setVerticalSpacing(0)
-            self.attn_grid.setHorizontalSpacing(0)
-            self.attn_grid.setContentsMargins(0,0,0,0)
-
-            self.attn_cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range(self.size)]
-            for x in range(self.size):
-                for y in range(self.size):
-                    cell = self.attn_cells[x][y]
-                    cell.setFixedSize(40,40)
-                    cell.setAlignment(QtCore.Qt.AlignCenter)
-                    cell.setStyleSheet(
-                        "background-color: black;"
-                        "border:none;"
-                    )
-                    self.attn_grid.addWidget(cell, x, y)
-
-        self.setLayout(self.main_layout)
-
- 
-    def updated(self,action:[int,int,int],true_value:bool=False,update_delay:float=1.0,attention_weights=None) -> list[list[int]]: 
-
-        if action is not None: 
-            assert len(action) == 3
-            row,column,value = action
-            styleList = self.cells[row][column].styleSheet().split(";")
-            if len(styleList) != 8 : # small bug fix here, more documentation maybe...
-                del styleList[-1]
-            styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
-            cellColor = styleDict["color"]
-            
-            ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
-            ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
-      
-            if cellColor not in ("white","black") and value in range(1,10):
-                
-                if true_value: 
-                    self.cells[row][column].setText(str(value))   # Update cell with value
-                    assert self.cells[row][column].text() != str(0)
-                    self.game[row][column] = value                # Update grid with value 
-                    color = "black"
-                else:
-                    color = "transparent"
-                
-                updatedStyle = [
-                    "background-color:dark grey;"
-                    f"border-left:{ubl}px solid black;"
-                    f"border-top: {ubt}px solid black;"
-                    "border-right: 1px solid black;"
-                    "border-bottom: 1px solid black;"
-                    f"color: {color};"
-                    "font-weight: None;"
-                    "font-size: 20px"
-                ]
-                self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color
-
-                def reset_style():
-                    background = "orange" if color == "black" else "grey" 
-                    normalStyle = [
-                        f"background-color:{background};",
-                        f"border-left:{ubl}px solid black;",
-                        f"border-top: {ubt}px solid black;",
-                        "border-right: 1px solid black;",
-                        "border-bottom: 1px solid black;",
-                        f"color: {color};",
-                        "font-weight: None;",
-                        "font-size: 20px;"
-                    ]
-                    self.cells[row][column].setStyleSheet("".join(normalStyle)) 
-                
-                
-                if (self.game==0).sum() > 1 and not true_value:
-                    QTimer.singleShot(update_delay, reset_style)  
-                else:
-                    QTimer.singleShot(0, reset_style)  
-
-                if self.rendering_attention and attention_weights is not None:
-                    self.render_attention(attention_weights)  
-
-        return self.game
-
-    def reset(self,board):
-        self.game = board
-        for line in self.game :
-            for x in range(self.size):
-                
-                for y in range(self.size):
-                    self.cells[x][y].setFixedSize(40,40)
-                    self.cells[x][y].setReadOnly(True)
-                    number = str(board[x][y])
-                    self.cells[x][y].setText(number)
-                    self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) 
-                    self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
-                    self.color = ("transparent" if int(self.cells[x][y].text()) == 0 else "white")
-                    self.cellStyle = [
-                        "background-color:grey;"
-                        f"border-left:{self.bl}px solid black;"
-                        f"border-top: {self.bt}px solid black;"
-                        "border-right: 1px solid black;"
-                        "border-bottom: 1px solid black;"
-                        f"color: {self.color};"
-                        "font-weight: None;"
-                        "font-size: 20px"
-                    ]
-                    self.cells[x][y].setStyleSheet("".join(self.cellStyle))
-
-    def render_attention(self,attn):
-        for i in range(self.size):
-            for j in range(self.size):
-                v = attn[i, j]
-                intensity = int(255 * v)
-                self.attn_cells[i][j].setStyleSheet(
-                    f"""
-                    background-color: rgb({intensity}, {intensity}, 255);
-                    """
-                )
-      
-
-def region_fn(index:list,board,n = 3): # returns the region (row ∪ column ∪ 3X3 block) of a cells
+def _region_fn(index:list,board,n = 3): 
+    # returns the region (row ∪ column ∪ 3X3 block) of a cells
     board = board.copy()
     x,y = index
     xlist = board[x]
@@ -211,12 +38,6 @@ def _is_region_complete(board,x,y,n=3):
     ix,iy = (x//n)* n , (y//n)* n
     block = board[ix:ix+n , iy:iy+n].flatten()
     return np.all(block!=0)
-    
-
-app = QApplication.instance()
-if app is None:
-    app = QApplication([])
-
 
 def _sudoku_board(csv_path,line_pick): 
     with open(csv_path) as file:
@@ -230,37 +51,50 @@ def _sudoku_board(csv_path,line_pick):
         )
     return board,solution
 
-def _gen_board(eval_mode):
-    if eval_mode:
+def _gen_board(env_mode,eval_mode):
+    csv_path = Path(__file__).parent 
+    if env_mode=="biased":
+        csv_path_train = csv_path/"datasets/v0_biased/train_boards.csv"
+        csv_path_test = csv_path/"datasets/v0_biased/test_boards.csv"
         line_pick = random.randint(0,49)
-        csv_path_test = Path(__file__).parent/"sudoku_50_tests.csv"
+    
+    elif env_mode=="easy":
+        csv_path_train = csv_path/"datasets/v1_easy/train_boards.csv"
+        csv_path_test = csv_path/"datasets/v1_easy/test_boards.csv"
+        line_pick = random.randint(0,49)
+
+    if eval_mode:        
         state,solution = deepcopy(_sudoku_board(csv_path_test,line_pick))
     else:
-        line_pick = random.randint(1,100)
-        csv_path_train = Path(__file__).parent/"sudoku_100.csv"
         state,solution = deepcopy(_sudoku_board(csv_path_train,line_pick))
     return state,solution
 
 
+V0_MODES = ["biased"]
+V1_MODES = ["easy"]
+
 class Gym_env(gym.Env): 
-    metadata = {"render_modes": ["human"],"render_fps":60,"rendering_attention":False}   
+    metadata = {"render_modes":["human"],"render_fps":60,"rendering_attention":False}   
     def __init__(self,
+                 mode,
                  render_mode=None,
                  horizon=100,
                  eval_mode:bool=False,
-                 render_delay:float=0.1,
+                 render_delay:float=0.0,
                  rendering_attention=False
         ):
         super().__init__()
+  
+        self.env_mode = mode
         self.render_mode = render_mode
         self.horizon = horizon
         self.eval_mode = eval_mode
         self.render_delay = render_delay
         self.rendering_attention = rendering_attention
-
         self.env_steps = 0
         self.action = None
         self.true_action = False
+
         self.action_space = spaces.Tuple(
             (
             spaces.Discrete(9,None,0),
@@ -269,50 +103,71 @@ class Gym_env(gym.Env):
             )
         )
         self.observation_space = spaces.Box(0,9,(9,9),dtype=np.int32)
-        self.state,self.solution = _gen_board(self.eval_mode)
-        self.mask = (self.state==0)
-        self.gui = Gui(deepcopy(self.state),self.rendering_attention)
-        self.region = region_fn
-        self.conflicts = (self.state == 0).sum()
-                
-    def reset(self,seed=None, options=None) -> np.array :
-        super().reset(seed=seed)
 
-        self.state,self.solution = _gen_board(self.eval_mode)
+        self.state,self.solution = _gen_board(self.env_mode,self.eval_mode)
+        self.mask = (self.state==0)
+        self.region = _region_fn
+        self.conflicts = (self.state==0).sum()
+
+        # init gui
+        self.app = None
+        if self.render_mode=="human":
+            self.app = QApplication.instance()
+            if self.app is None:
+                self.app = QApplication([])
+            
+            self.gui = Gui(deepcopy(self.state),self.rendering_attention)
+ 
+    def reset(self,seed=None,options=None) -> np.array :
+        super().reset(seed=seed)
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+
+        self.state,self.solution = _gen_board(self.env_mode,self.eval_mode)
         self.env_steps = 0
         self.mask = (self.state==0)
         
         if self.render_mode =="human":
             self.gui.reset(deepcopy(self.state))
         return np.array(self.state,dtype=np.int32),{}
+    
+    def _get_reward(self,env_mode,action): 
+        x,y,value = action
+
+        if self.env_mode=="biased":
+            if not self.mask[x,y]: 
+                reward = -0.1 
+                true_action = False  
+            else:
+                if value == self.solution[x,y]:
+                    self.state[x,y] = value
+                    self.mask[x,y] = False
+                    assert action[-1] in range(1,10)
+                    true_action = True  
+                    reward = 0.3
+                    
+                    if _is_row_complete(self.state,x):
+                        reward+= 0.3*9
+                    if _is_col_complete(self.state,y):
+                        reward+= 0.3*9
+                    if _is_region_complete(self.state,x,y):
+                        reward+= 0.3*9
+                else:
+                    reward = -0.1
+                    true_action = False
+            return reward,true_action
+
+        elif env_mode=="easy":
+            pass 
 
     def step(self,action):
-        assert (action[0] and action[1]) in range(9),f"x and y not in range [0,9]"
-        
+        assert (action[0] and action[1]) in range(9)
         self.env_steps+=1
         self.action = action
-        x,y,value = self.action 
-
-        if not self.mask[x,y]: # if target cell is not modifiable
-            reward = -0.1 
-            self.true_action = False  
-        else:
-            if value == self.solution[x,y]:
-                self.state[x,y] = value
-                self.mask[x,y] = False
-                assert action[-1] in range(1,10),f"cell value not in range [1,9]"
-                self.true_action = True  
-                reward = 0.3
-                
-                if _is_row_complete(self.state,x):
-                    reward+= 0.3*9
-                if _is_col_complete(self.state,y):
-                    reward+= 0.3*9
-                if _is_region_complete(self.state,x,y):
-                    reward+= 0.3*9
-            else:
-                reward = -0.1
-                self.true_action = False
+        
+        reward,true_action = self._get_reward(self.env_mode,self.action)
+        self.true_action = true_action
 
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,self.solution)
@@ -323,17 +178,8 @@ class Gym_env(gym.Env):
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
     def render(self):
-        if self.render_mode == "human":
-            self.gui.show()
-            
-            # TODO : Implement attention weights rendering
-            #if attention_weights is not None and self.rendering_attention:
-                #self.gui.updated(self.action,self.true_action,attention_weights)
-            #else:
-            self.gui.updated(self.action,self.true_action,self.render_delay)
-            app.processEvents() 
-        else :
-            sys.exit("render_mode attribute should be set to \"human\"")
-
+        self.gui.show()
+        self.gui.updated(self.action,self.true_action,self.render_delay)
+        self.app.processEvents() 
 
 
