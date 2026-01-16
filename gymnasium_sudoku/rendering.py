@@ -1,0 +1,174 @@
+from PySide6 import QtCore,QtGui
+from PySide6.QtWidgets import QWidget,QGridLayout,QLineEdit,QHBoxLayout
+from PySide6.QtCore import QTimer
+from PySide6.QtGui import QIcon 
+
+
+class Gui(QWidget): 
+    def __init__(self,board,solution,rendering_attention=False):
+        super().__init__()
+        self.setWindowTitle("Sudoku")
+        self.setMaximumSize(40,40)
+        self.setWindowIcon(QIcon("game.png"))
+        self.game = board
+        self.solution = solution
+        self.size = 9
+        self.rendering_attention = rendering_attention
+    
+        self.main_layout = QHBoxLayout()
+
+        # Sudoku grid
+        self.grid = QGridLayout()
+        self.sudoku_widget = QWidget()
+        self.sudoku_widget.setLayout(self.grid)
+        self.main_layout.addWidget(self.sudoku_widget)
+        self.grid.setVerticalSpacing(0)
+        self.grid.setHorizontalSpacing(0)
+        self.grid.setContentsMargins(0,0,0,0)
+
+        self.cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range (self.size)] 
+        for line in self.game :
+            for x in range(self.size):
+                for y in range(self.size):
+                    self.cells[x][y].setFixedSize(40,40)
+                    self.cells[x][y].setReadOnly(True)
+                    number = str(board[x][y])
+                    self.cells[x][y].setText(number)
+                    self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) # what is bl,bt ? 
+                    self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
+                    self.color =("transparent" if int(self.cells[x][y].text()) == 0 else "white")
+                    self.cellStyle = [
+                        "background-color:grey;"
+                        f"border-left:{self.bl}px solid black;"
+                        f"border-top: {self.bt}px solid black;"
+                        "border-right: 1px solid black;"
+                        "border-bottom: 1px solid black;"
+                        f"color: {self.color};"
+                        "font-weight: None;"
+                        "font-size: 20px"
+                    ]
+                    self.cells[x][y].setStyleSheet("".join(self.cellStyle))
+                    self.cells[x][y].setAlignment(QtCore.Qt.AlignCenter)
+                    self.grid.addWidget(self.cells[x][y],x,y)
+        
+        if self.rendering_attention:
+            # Attention grid
+            self.attn_grid = QGridLayout()
+            self.attn_widget = QWidget()
+            self.attn_widget.setLayout(self.attn_grid)
+            self.main_layout.addWidget(self.attn_widget)
+            self.attn_grid.setVerticalSpacing(0)
+            self.attn_grid.setHorizontalSpacing(0)
+            self.attn_grid.setContentsMargins(0,0,0,0)
+
+            self.attn_cells = [[QLineEdit(self) for _ in range(self.size)] for _ in range(self.size)]
+            for x in range(self.size):
+                for y in range(self.size):
+                    cell = self.attn_cells[x][y]
+                    cell.setFixedSize(40,40)
+                    cell.setAlignment(QtCore.Qt.AlignCenter)
+                    cell.setStyleSheet(
+                        "background-color: black;"
+                        "border:none;"
+                    )
+                    self.attn_grid.addWidget(cell, x, y)
+
+        self.setLayout(self.main_layout)
+
+    def updated(self,action:[int,int,int],true_value:bool=False,update_delay:float=1.0,attention_weights=None): 
+
+        if action is not None: 
+            assert len(action) == 3
+            row,column,value = action
+            styleList = self.cells[row][column].styleSheet().split(";")
+            if len(styleList) != 8 : # small bug fix here, more documentation maybe...
+                del styleList[-1]
+            styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
+            cellColor = styleDict["color"]
+            
+            ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
+            ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
+      
+            if cellColor not in ("white","black") and value in range(1,10):
+                
+                if true_value: 
+                    self.cells[row][column].setText(str(value))   # Update cell with value
+                    assert self.cells[row][column].text() != str(0)
+                    self.game[row][column] = value                # Update grid with value 
+                    color = "black"
+                else:
+                    color = "transparent"
+                
+                updatedStyle = [
+                    "background-color:dark grey;"
+                    f"border-left:{ubl}px solid black;"
+                    f"border-top: {ubt}px solid black;"
+                    "border-right: 1px solid black;"
+                    "border-bottom: 1px solid black;"
+                    f"color: {color};"
+                    "font-weight: None;"
+                    "font-size: 20px"
+                ]
+                self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color
+
+                def reset_style():
+                    background = "orange" if color == "black" else "grey" 
+                    normalStyle = [
+                        f"background-color:{background};",
+                        f"border-left:{ubl}px solid black;",
+                        f"border-top: {ubt}px solid black;",
+                        "border-right: 1px solid black;",
+                        "border-bottom: 1px solid black;",
+                        f"color: {color};",
+                        "font-weight: None;",
+                        "font-size: 20px;"
+                    ]
+                    self.cells[row][column].setStyleSheet("".join(normalStyle)) 
+                
+                
+                if (self.game==0).sum() > 1 and not true_value:
+                    QTimer.singleShot(update_delay, reset_style)  
+                else:
+                    QTimer.singleShot(0, reset_style)  
+
+                if self.rendering_attention and attention_weights is not None:
+                    self.render_attention(attention_weights)  
+
+        return self.game
+
+    def reset(self,board):
+        self.game = board
+        for line in self.game :
+            for x in range(self.size):
+                
+                for y in range(self.size):
+                    self.cells[x][y].setFixedSize(40,40)
+                    self.cells[x][y].setReadOnly(True)
+                    number = str(board[x][y])
+                    self.cells[x][y].setText(number)
+                    self.bl = (3 if (y%3 == 0 and y!= 0) else 0.5) 
+                    self.bt = (3 if (x%3 == 0 and x!= 0) else 0.5)
+                    self.color = ("transparent" if int(self.cells[x][y].text()) == 0 else "white")
+                    self.cellStyle = [
+                        "background-color:grey;"
+                        f"border-left:{self.bl}px solid black;"
+                        f"border-top: {self.bt}px solid black;"
+                        "border-right: 1px solid black;"
+                        "border-bottom: 1px solid black;"
+                        f"color: {self.color};"
+                        "font-weight: None;"
+                        "font-size: 20px"
+                    ]
+                    self.cells[x][y].setStyleSheet("".join(self.cellStyle))
+
+    def render_attention(self,attn):
+        for i in range(self.size):
+            for j in range(self.size):
+                v = attn[i, j]
+                intensity = int(255 * v)
+                self.attn_cells[i][j].setStyleSheet(
+                    f"""
+                    background-color: rgb({intensity}, {intensity}, 255);
+                    """
+                )
+
