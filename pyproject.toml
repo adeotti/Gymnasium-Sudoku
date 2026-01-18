@@ -7,7 +7,7 @@ name = "gymnasium_sudoku"
 authors = [{ name = "", email = "adeottidev@gmail.com" }]
 description = "A Sudoku environment for Reinforcement Learning research"
 
-version = "0.2.3"
+version = "0.3.2"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -42,4 +42,7 @@ where = ["."]
 exclude = ["venv*", "test*", "tests*", "*.egg-info", "dist", "build"]
 
 [tool.setuptools.package-data]
-gymnasium_sudoku = ["*.csv"]
+gymnasium_sudoku = [
+    "datasets/v0_biased/*.csv",
+    "datasets/v1_easy/*.csv"
+]
