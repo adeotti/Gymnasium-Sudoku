@@ -5,13 +5,14 @@ from PySide6.QtGui import QIcon
 
 
 class Gui(QWidget): 
-    def __init__(self,board,solution,rendering_attention=False):
+    def __init__(self,board,mode,rendering_attention=False):
         super().__init__()
         self.setWindowTitle("Sudoku")
         self.setMaximumSize(40,40)
         self.setWindowIcon(QIcon("game.png"))
         self.game = board
-        self.solution = solution
+        self.mode = mode
+        
         self.size = 9
         self.rendering_attention = rendering_attention
     
@@ -75,32 +76,50 @@ class Gui(QWidget):
 
         self.setLayout(self.main_layout)
 
-    def updated(self,action:[int,int,int],true_value:bool=False,update_delay:float=1.0,attention_weights=None): 
+    def updated(self,action:[int,int,int],true_value:bool=False,attention_weights=None): 
 
         if action is not None: 
             assert len(action) == 3
             row,column,value = action
             styleList = self.cells[row][column].styleSheet().split(";")
-            if len(styleList) != 8 : # small bug fix here, more documentation maybe...
+            if len(styleList) != 8 :
                 del styleList[-1]
             styleDict = {k.strip() : v.strip() for k,v in (element.split(":") for element in styleList)}
             cellColor = styleDict["color"]
-            
-            ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
-            ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
-      
-            if cellColor not in ("white","black") and value in range(1,10):
-                
-                if true_value: 
-                    self.cells[row][column].setText(str(value))   # Update cell with value
-                    assert self.cells[row][column].text() != str(0)
-                    self.game[row][column] = value                # Update grid with value 
+         
+            if self.mode == "biased":                                       # v0 version----------
+                if cellColor not in ("white","black") and value in range(1,10):
+                    if true_value: 
+                        self.cells[row][column].setText(str(value))   
+                        assert self.cells[row][column].text() != str(0)
+                        self.game[row][column] = value                
+                        color = "black"
+                    else:
+                        color = cellColor
+                    
+                    self.update_style(action,color)
+             
+            else:                                                            # v1 version-----------
+                if not cellColor=="white": 
+                    self.cells[row][column].setText(str(value))
                     color = "black"
                 else:
-                    color = "transparent"
+                    color = cellColor
+
+                self.update_style(action,color)
                 
-                updatedStyle = [
-                    "background-color:dark grey;"
+    
+    def update_style(self,action,color):
+        row,column,value = action
+        ubl = (3 if (column % 3 == 0 and column!= 0) else 0.5)
+        ubt = (3 if (row % 3 == 0 and row!= 0) else 0.5)
+        if color=="black":
+            background="orange"
+        else:
+            background="grey"
+
+        updatedStyle = [
+                    f"background-color:{background};"
                     f"border-left:{ubl}px solid black;"
                     f"border-top: {ubt}px solid black;"
                     "border-right: 1px solid black;"
@@ -108,39 +127,14 @@ class Gui(QWidget):
                     f"color: {color};"
                     "font-weight: None;"
                     "font-size: 20px"
-                ]
-                self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color
-
-                def reset_style():
-                    background = "orange" if color == "black" else "grey" 
-                    normalStyle = [
-                        f"background-color:{background};",
-                        f"border-left:{ubl}px solid black;",
-                        f"border-top: {ubt}px solid black;",
-                        "border-right: 1px solid black;",
-                        "border-bottom: 1px solid black;",
-                        f"color: {color};",
-                        "font-weight: None;",
-                        "font-size: 20px;"
-                    ]
-                    self.cells[row][column].setStyleSheet("".join(normalStyle)) 
+        ]
+        self.cells[row][column].setStyleSheet("".join(updatedStyle)) # Update the cell color
                 
-                
-                if (self.game==0).sum() > 1 and not true_value:
-                    QTimer.singleShot(update_delay, reset_style)  
-                else:
-                    QTimer.singleShot(0, reset_style)  
-
-                if self.rendering_attention and attention_weights is not None:
-                    self.render_attention(attention_weights)  
-
-        return self.game
 
     def reset(self,board):
         self.game = board
         for line in self.game :
             for x in range(self.size):
-                
                 for y in range(self.size):
                     self.cells[x][y].setFixedSize(40,40)
                     self.cells[x][y].setReadOnly(True)
