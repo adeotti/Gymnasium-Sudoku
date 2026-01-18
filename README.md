@@ -1,27 +1,27 @@
+```
+pip install gymnasium_sudoku
+```
+
 **Observation space :** The state returned after each `.reset()` or `.step()` is a raw sudoku board shape `[9,9]`.This observation can be converted into an image.
 
 **Action space:** The action space is shaped `[x,y,z]`,representing : x = row position of the cell, y = column position of the cell and value that should go into that cell.When vectorizing, the current version of the environment do not handle action reshaping, so for n environments, the action's shape should be : `[[x0...xn],[y0...yn],[z0...zn]]`
 
+**Horizon:** This parameter controls the number of steps after which `Truncated` is set to `True` and the environment is reset. Otherwise, early in training (when the policy is still mostly random and the exploration incentive is high), the policy may corrupt the board and either make it unsolvable or push it into a local minimum. The default value for this parameter is set to 400 for no specific reason and should probably be adjusted during initialization.
+
+**Eval mode/Training mode :** By default, eval_mode in the __init__ method is set to `False`. This is used for training, where the environment is reset with one of 50 different boards after eacg .reset() call. During testing, eval_mode should be set to `True` in order to evaluate the agent on boards that were never seen during the training phase.
+
 
 ### Sudoku-v0 (biased version)
-The latest version of this environment is 0.2.3
-
-**Installation :**
-```
-pip install gymnasium_sudoku<=0.2.3
-```
 ```python 
 import gymnasium as gym
 
-env = gym.make("sudoku-v0",render_mode="human",horizon=150,render_delay=1.0,eval_mode=True)
+env = gym.make("sudoku-v0",mode="biased"render_mode="human",horizon=600,eval_mode=True)
 env.reset() 
 
 for n in range(int(6e3)):
     env.step(env.action_space.sample())
     env.render() 
 ```
-**Eval mode/Training mode :** By default, `eval_mode` in the init method is set to `False`, this is for training where the envrionment will be reseted with 100 differents boards after each .reset() calls.During testing, `eval_mode` should be set to `True` to test on board never seen during the training phase.The booards using during training and test are in separate csv files : sudoku_100.csv and sudoku_50.scv (100 boards in the training file and 50 in the test file)
-
 **Bias :**
 Among the induced biases that immensely help guide that learning is the fact that the policy cannot modify a cell that was already correctly filled, on top of the existing untouchable cells present in the beginning.
 
@@ -29,3 +29,15 @@ Among the induced biases that immensely help guide that learning is the fact tha
 
 
 ### Sudoku-v1
+```python 
+import gymnasium as gym
+
+env = gym.make("sudoku-v1",mode="easy",render_mode="human",horizon=600,eval_mode=True)
+env.reset() 
+
+for n in range(int(6e3)):
+    env.step(env.action_space.sample())
+    env.render() 
+```
+
+
