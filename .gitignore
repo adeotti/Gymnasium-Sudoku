@@ -6,7 +6,7 @@ __pycache__/
 /wheels
 /wheelhouse
 /*.egg-info
-/tests/test2.py
+/tests/test_2.py
 /tests/model_test
 
 utils.py
