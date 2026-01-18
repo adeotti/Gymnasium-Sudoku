@@ -1,4 +1,4 @@
-import csv,random,time,sys
+import csv,random,sys
 import numpy as np
 import gymnasium as gym
 import gymnasium.spaces as spaces
@@ -8,8 +8,9 @@ from gymnasium_sudoku.rendering import Gui
 from copy import deepcopy
 from pathlib import Path
 
-def _get_region(x,y,board,n = 3): 
-    # returns the region (row ∪ column ∪ 3X3 block) - indice of the target cell
+def _get_region(x,y,board,n = 3):
+    # T = target cell
+    # returns the region (row - T ∪ column - T ∪ 3X3 block T)
     board = board.copy()
     xlist = board[x]
     xlist = np.concatenate((xlist[:y],xlist[y+1:]))
@@ -77,9 +78,8 @@ class Gym_env(gym.Env):
     def __init__(self,
                  mode,
                  render_mode=None,
-                 horizon=100,
+                 horizon=400,
                  eval_mode:bool=False,
-                 render_delay:float=0.0,
                  rendering_attention=False
         ):
         super().__init__()
@@ -88,7 +88,6 @@ class Gym_env(gym.Env):
         self.render_mode = render_mode
         self.horizon = horizon
         self.eval_mode = eval_mode
-        self.render_delay = render_delay
         self.rendering_attention = rendering_attention
         self.env_steps = 0
         self.action = None
@@ -116,7 +115,7 @@ class Gym_env(gym.Env):
             
             self.gui = Gui(deepcopy(self.state),self.env_mode,self.rendering_attention)
  
-    def reset(self,seed=None,options=None) -> np.array :
+    def reset(self,seed=None,options=None):
         super().reset(seed=seed)
         if seed is not None:
             random.seed(seed)
@@ -143,14 +142,14 @@ class Gym_env(gym.Env):
                     self.mask[x,y] = False
                     assert action[-1] in range(1,10)
                     true_action = True  
-                    reward = 0.3
+                    reward = 0.2
                     
                     if _is_row_complete(state,x):
-                        reward+= 0.3*9
+                        reward+= 0.2*9
                     if _is_col_complete(state,y):
-                        reward+= 0.3*9
+                        reward+= 0.2*9
                     if _is_region_complete(state,x,y):
-                        reward+= 0.3*9
+                        reward+= 0.2*9
                 else:
                     reward = -0.1
                     true_action = False
@@ -173,18 +172,18 @@ class Gym_env(gym.Env):
             block = filter_zeros(block)
             
             if not value in np.concatenate((xlist,ylist,block)):
-                reward = 0.3*3
+                reward = 0.2*3
                 return reward,true_action,state
             
             reward = 0
             if len(row) == len(np.unique(row)):
-                reward += 0.3
+                reward += 0.2
             
             if len(col) == len(np.unique(col)):
-                reward += 0.3
+                reward += 0.2
             
             if len(block) == len(np.unique(block)):
-                reward += 0.3
+                reward += 0.2
 
             return reward,True,state     
 
@@ -200,12 +199,12 @@ class Gym_env(gym.Env):
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,self.solution)
         if done:
-            reward+=0.3*81
+            reward+=0.2*81
         info = {}
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
     def render(self):
         self.gui.show()
-        self.gui.updated(self.action,self.true_action,self.render_delay)
+        self.gui.updated(self.action,self.true_action)
         self.app.processEvents() 
 
