@@ -6,8 +6,11 @@ __pycache__/
 /wheels
 /wheelhouse
 /*.egg-info
+/tests/test2.py
+/tests/model_test
 
 utils.py
 unitest.py
 ac3.py
 test.py
+
