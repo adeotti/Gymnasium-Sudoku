@@ -2,7 +2,7 @@ from gymnasium.envs.registration import register
 from gymnasium_sudoku.environment import Gym_env,V0_MODES,V1_MODES
 
 __all__ = ["Gym_env"]
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 
 def _make_v0(**kwargs):
