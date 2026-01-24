@@ -32,7 +32,7 @@ def _is_row_complete(board,x):
 
 def _is_col_complete(board,y):
     ylist = board[:,y]
-    return np.all(ylist!=0):w
+    return np.all(ylist!=0)
 
 def _is_region_complete(board,x,y,n=3):
     ix,iy = (x//n)* n , (y//n)* n
