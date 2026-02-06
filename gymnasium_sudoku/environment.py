@@ -140,71 +140,74 @@ class Gym_env(gym.Env):
             self.gui.reset(deepcopy(self.state))
         return np.array(self.state,dtype=np.int32),{}
 
-    def _get_biased_mode_reward(self):
-        pass
-
-    def _get_easy_mode_reward(self):
-        pass
-
-    def _get_reward(self,env_mode,action,state): 
+    def _get_biased_mode_reward(self,action,state):
         x,y,value = action
-
-        if self.env_mode=="biased":
-            if not self.mask[x,y]: 
-                reward = -0.1 
-                true_action = False  
+        if not self.mask[x,y]: 
+            reward = -0.1 
+            true_action = False  
+        else:
+            if value == self.solution[x,y]:
+                state[x,y] = value
+                self.mask[x,y] = False
+                assert action[-1] in range(1,10)
+                true_action = True  
+                reward = 0.2
+                
+                if _is_row_complete(state,x):
+                    reward+= 0.2*9
+                if _is_col_complete(state,y):
+                    reward+= 0.2*9
+                if _is_region_complete(state,x,y):
+                    reward+= 0.2*9
             else:
-                if value == self.solution[x,y]:
-                    state[x,y] = value
-                    self.mask[x,y] = False
-                    assert action[-1] in range(1,10)
-                    true_action = True  
-                    reward = 0.2
-                    
-                    if _is_row_complete(state,x):
-                        reward+= 0.2*9
-                    if _is_col_complete(state,y):
-                        reward+= 0.2*9
-                    if _is_region_complete(state,x,y):
-                        reward+= 0.2*9
-                else:
-                    reward = -0.1
-                    true_action = False
-
-            return reward,true_action,state
-
-        elif env_mode=="easy":
-            reward = 0
-            if not self.mask[x][y]:
                 reward = -0.1
                 true_action = False
-                return reward,true_action,state
-            
-            state[x][y] = value
-            true_action = True
-            filter_zeros = lambda x : x[x!=0]
-            xlist,ylist,block = _get_region(x,y,state)
+        return reward,true_action_state
+        
+    def _get_easy_mode_reward(self,action,state):
+        x,y,value = action
+        reward = 0
+        if not self.mask[x][y]:
+            reward = -0.1
+            true_action = False
+            return reward,true_action,state
+        
+        state[x][y] = value
+        true_action = True
+        filter_zeros = lambda x : x[x!=0]
+        xlist,ylist,block = _get_region(x,y,state)
 
-            row = filter_zeros(xlist)
-            col = filter_zeros(ylist)
-            block = filter_zeros(block)
-            
-            if not value in np.concatenate((xlist,ylist,block)):
-                reward = 0.2*3
-                return reward,true_action,state
-            
-            reward = 0
-            if len(row) == len(np.unique(row)):
-                reward += 0.2
-            
-            if len(col) == len(np.unique(col)):
-                reward += 0.2
-            
-            if len(block) == len(np.unique(block)):
-                reward += 0.2
+        row = filter_zeros(xlist)
+        col = filter_zeros(ylist)
+        block = filter_zeros(block)
+        
+        if not value in np.concatenate((xlist,ylist,block)):
+            reward = 0.2*3
+            return reward,true_action,state
+        
+        reward = 0
+        if len(row) == len(np.unique(row)):
+            reward += 0.2
+        
+        if len(col) == len(np.unique(col)):
+            reward += 0.2
+        
+        if len(block) == len(np.unique(block)):
+            reward += 0.2
 
-            constrains_memory = self._get_constrains_memory(state)
-            return reward,True,state     
+        constrains_memory = self._get_constrains_memory(state)
+    
+        return reward,true_action,state
+
+    def _get_reward(self,env_mode,action,state): 
+        
+        if self.env_mode=="biased":
+            reward,true_action,_state = self._get_biased_mode_reward(action,state)
+            return reward,true_action,_state
+
+        elif env_mode=="easy":
+            reward,true_action,_state = self._get_easy_mode_reward(action,state)
+            return reward,true_action,_state     
 
     def step(self,action):
         assert (action[0] and action[1]) in range(9)
@@ -229,4 +232,5 @@ class Gym_env(gym.Env):
             self.app.processEvents() 
         else:
             raise ValueError("Set render mode to human before calling .render()")
+
 
