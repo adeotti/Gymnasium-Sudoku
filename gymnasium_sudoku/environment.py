@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 from gymnasium_sudoku.rendering import Gui
 from copy import deepcopy
 from pathlib import Path
+from collections import deque
 
 def _get_region(x,y,board,n = 3):
     # T = target cell
@@ -114,7 +115,16 @@ class Gym_env(gym.Env):
                 self.app = QApplication([])
             
             self.gui = Gui(deepcopy(self.state),self.env_mode,self.rendering_attention)
- 
+
+    def _get_constrains_memory(self,board):
+        # returns all rows, columns and regions on the board
+        rows = [n.tolist() for n in board]
+        cols = [m.tolist() for m in board.T] 
+        regions = board.reshape(3,3,3,3).transpose(0,2,1,3).reshape(9,9)
+        regions = [a.tolist() for a in regions] 
+        memory = np.concatenate([rows,cols,regions])
+        return memory
+
     def reset(self,seed=None,options=None):
         super().reset(seed=seed)
         if seed is not None:
@@ -124,11 +134,18 @@ class Gym_env(gym.Env):
         self.state,self.solution = _gen_board(self.env_mode,self.eval_mode)
         self.env_steps = 0
         self.mask = (self.state==0)
+        self.conflicts_memory = []
         
         if self.render_mode =="human":
             self.gui.reset(deepcopy(self.state))
         return np.array(self.state,dtype=np.int32),{}
-    
+
+    def _get_biased_mode_reward(self):
+        pass
+
+    def _get_easy_mode_reward(self):
+        pass
+
     def _get_reward(self,env_mode,action,state): 
         x,y,value = action
 
@@ -153,6 +170,7 @@ class Gym_env(gym.Env):
                 else:
                     reward = -0.1
                     true_action = False
+
             return reward,true_action,state
 
         elif env_mode=="easy":
@@ -185,6 +203,7 @@ class Gym_env(gym.Env):
             if len(block) == len(np.unique(block)):
                 reward += 0.2
 
+            constrains_memory = self._get_constrains_memory(state)
             return reward,True,state     
 
     def step(self,action):
@@ -204,7 +223,10 @@ class Gym_env(gym.Env):
         return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
 
     def render(self):
-        self.gui.show()
-        self.gui.updated(self.action,self.true_action)
-        self.app.processEvents() 
+        if self.render_mode == "human":
+            self.gui.show()
+            self.gui.updated(self.action,self.true_action)
+            self.app.processEvents() 
+        else:
+            raise ValueError("Set render mode to human before calling .render()")
 
