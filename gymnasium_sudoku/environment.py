@@ -118,6 +118,7 @@ class Gym_env(gym.Env):
 
     def _get_constrains_memory(self,board):
         # returns all rows, columns and regions on the board
+
         rows = [n.tolist() for n in board]
         cols = [m.tolist() for m in board.T] 
         regions = board.reshape(3,3,3,3).transpose(0,2,1,3).reshape(9,9)
@@ -196,7 +197,10 @@ class Gym_env(gym.Env):
             reward += 0.2
 
         constrains_memory = self._get_constrains_memory(state)
-    
+        filtered_memory = [liste[liste!=0].tolist() for liste in constrains_memory]
+        conf = 0
+        for arr in filtered_memory:
+            conf+=len(arr) - len(list(set(arr)))
         return reward,true_action,state
 
     def _get_reward(self,env_mode,action,state): 
