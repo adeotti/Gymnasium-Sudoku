@@ -163,62 +163,67 @@ class Gym_env(gym.Env):
             else:
                 reward = -0.1
                 true_action = False
-        return reward,true_action_state
+        return reward,true_action_state,None
         
     def _get_easy_mode_reward(self,action,state):
         x,y,value = action
         reward = 0
-        if not self.mask[x][y]:
-            reward = -0.1
-            true_action = False
-            return reward,true_action,state
-        
-        state[x][y] = value
-        true_action = True
-        filter_zeros = lambda x : x[x!=0]
-        xlist,ylist,block = _get_region(x,y,state)
-
-        row = filter_zeros(xlist)
-        col = filter_zeros(ylist)
-        block = filter_zeros(block)
-        
-        if not value in np.concatenate((xlist,ylist,block)):
-            reward = 0.2*3
-            return reward,true_action,state
-        
-        reward = 0
-        if len(row) == len(np.unique(row)):
-            reward += 0.2
-        
-        if len(col) == len(np.unique(col)):
-            reward += 0.2
-        
-        if len(block) == len(np.unique(block)):
-            reward += 0.2
 
         constrains_memory = self._get_constrains_memory(state)
         filtered_memory = [liste[liste!=0].tolist() for liste in constrains_memory]
         conf = 0
         for arr in filtered_memory:
             conf+=len(arr) - len(list(set(arr)))
-        return reward,true_action,state
+        conf*=0.001
+        conf = round(conf,3)
+    
+        if not self.mask[x][y]:
+            reward = -0.1-conf
+            true_action = False 
 
-    def _get_reward(self,env_mode,action,state): 
+        else:
+            state[x][y] = value
+            true_action = True
+            filter_zeros = lambda x : x[x!=0]
+            xlist,ylist,block = _get_region(x,y,state)
+
+            row = filter_zeros(xlist)
+            col = filter_zeros(ylist)
+            block = filter_zeros(block)
+            region = np.concatenate((xlist,ylist,block))
         
+            if not value in region and len(region)==((3*9)-3):
+                reward = 0.2*3 - conf 
+                return reward,true_action,state,conf
+            
+            reward = 0
+            if len(row) == len(np.unique(row)):
+                reward += 0.2
+            
+            if len(col) == len(np.unique(col)):
+                reward += 0.2
+            
+            if len(block) == len(np.unique(block)):
+                reward += 0.2
+            reward-=conf
+
+        return reward,true_action,state,conf
+
+    def _get_reward(self,env_mode,action,state):  
         if self.env_mode=="biased":
-            reward,true_action,_state = self._get_biased_mode_reward(action,state)
-            return reward,true_action,_state
+            reward,true_action,_state,conflicts = self._get_biased_mode_reward(action,state)
+            return reward,true_action,_state,conflicts
 
         elif env_mode=="easy":
-            reward,true_action,_state = self._get_easy_mode_reward(action,state)
-            return reward,true_action,_state     
+            reward,true_action,_state,conflicts = self._get_easy_mode_reward(action,state)
+            return reward,true_action,_state,conflicts   
 
     def step(self,action):
         assert (action[0] and action[1]) in range(9)
         self.env_steps+=1
         self.action = action
      
-        reward,true_action,obs = self._get_reward(self.env_mode,self.action,self.state)
+        reward,true_action,obs,conflicts = self._get_reward(self.env_mode,self.action,self.state)
         self.true_action = true_action
         self.state = obs
 
@@ -226,8 +231,10 @@ class Gym_env(gym.Env):
         done = np.array_equal(self.state,self.solution)
         if done:
             reward+=0.2*81
-        info = {}
-        return np.array(self.state,dtype=np.int32),round(reward,1),done,truncated,info
+        info = {
+            "conflicts":conflicts
+        }
+        return np.array(self.state,dtype=np.int32),round(reward,3),done,truncated,info
 
     def render(self):
         if self.render_mode == "human":
@@ -236,5 +243,6 @@ class Gym_env(gym.Env):
             self.app.processEvents() 
         else:
             raise ValueError("Set render mode to human before calling .render()")
+
 
 
