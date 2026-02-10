@@ -174,39 +174,36 @@ class Gym_env(gym.Env):
         conf = 0
         for arr in filtered_memory:
             conf+=len(arr) - len(list(set(arr)))
-        conf*=0.001
-        conf = round(conf,3)
+        conf = round(conf*0.001,3)
     
         if not self.mask[x][y]:
-            reward = -0.1-conf
-            true_action = False 
+            reward = -0.1 - conf
+            true_action = False
+            return reward,true_action,state,conf
 
-        else:
-            state[x][y] = value
-            true_action = True
-            filter_zeros = lambda x : x[x!=0]
-            xlist,ylist,block = _get_region(x,y,state)
+        state[x][y] = value
+        true_action = True
+        filter_zeros = lambda x : x[x!=0]
+        xlist,ylist,block = _get_region(x,y,state)
 
-            row = filter_zeros(xlist)
-            col = filter_zeros(ylist)
-            block = filter_zeros(block)
-            region = np.concatenate((xlist,ylist,block))
+        row = filter_zeros(xlist)
+        col = filter_zeros(ylist)
+        block = filter_zeros(block)
+        region = np.concatenate((xlist,ylist,block))
         
-            if not value in region and len(region)==((3*9)-3):
-                reward = 0.2*3 - conf 
-                return reward,true_action,state,conf
-            
-            reward = 0
-            if len(row) == len(np.unique(row)):
-                reward += 0.2
-            
-            if len(col) == len(np.unique(col)):
-                reward += 0.2
-            
-            if len(block) == len(np.unique(block)):
-                reward += 0.2
-            reward-=conf
-
+        reward = 0
+        if not value in region and len(region)==((3*9)-3):
+            reward += 0.1 - conf 
+        
+            if len(row) == len(np.unique(row)) == 8:
+                reward += 0.4
+        
+            if len(col) == len(np.unique(col)) == 8:
+                reward += 0.4
+        
+            if len(block) == len(np.unique(block)) == 8:
+                reward += 0.4
+        
         return reward,true_action,state,conf
 
     def _get_reward(self,env_mode,action,state):  
