@@ -8,7 +8,7 @@ The state returned after each `.reset()` or `.step()` is a raw sudoku board shap
 ### Action space 
 The action space is shaped `[x,y,z]`,representing : x = row position of the cell, y = column position of the cell and value that should go into that cell.When vectorizing, the current version of the environment do not handle action reshaping, so for n environments, the action's shape should be : `[[x0...xn],[y0...yn],[z0...zn]]`
 
-## Horizon 
+### Horizon 
 This parameter controls the number of steps after which `Truncated` is set to `True` and the environment is reset. Otherwise, early in training (when the policy is still mostly random and the exploration incentive is high), the policy may corrupt the board and either make it unsolvable or push it into a local minimum. The default value for this parameter is set to 400 for no specific reason and should probably be adjusted during initialization.
 
 ### Eval mode/Training mode
@@ -58,7 +58,6 @@ for n in range(int(6e3)):
 **Measuring Learning :** Measuring learning here is quite straightforward and maybe the accent should be put on solving ability instead of speed, of course speed is important but to start, being able to solve different never seen boards from this version of the environment will be a sign of learning.
 
 
-
-Biased version data [source](https://www.kaggle.com/datasets/rohanrao/sudoku)
-
-Easy version data [source](https://www.kaggle.com/datasets/bryanpark/sudoku)
+### data sources:
+* Biased version data [source](https://www.kaggle.com/datasets/rohanrao/sudoku)
+* Easy version data [source](https://www.kaggle.com/datasets/bryanpark/sudoku)
