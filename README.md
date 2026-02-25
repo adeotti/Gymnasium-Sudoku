@@ -27,6 +27,7 @@ Local minima lurk at each step: many moves are locally consistent yet lead to de
 ### Sudoku-v0 (biased version)
 ```python 
 import gymnasium as gym
+import gymnasium_sudoku
 
 env = gym.make("sudoku-v0",mode="biased"render_mode="human",horizon=600,eval_mode=True)
 env.reset() 
@@ -44,6 +45,7 @@ Among the induced biases that immensely help guide that learning is the fact tha
 ### Sudoku-v1
 ```python 
 import gymnasium as gym
+import gymnasium_sudoku
 
 env = gym.make("sudoku-v1",mode="easy",render_mode="human",horizon=600,eval_mode=True)
 env.reset() 
