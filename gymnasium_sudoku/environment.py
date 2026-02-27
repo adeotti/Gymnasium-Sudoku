@@ -84,7 +84,6 @@ class Gym_env(gym.Env):
                  rendering_attention=False
         ):
         super().__init__()
-  
         self.env_mode = mode
         self.render_mode = render_mode
         self.horizon = horizon
@@ -118,7 +117,6 @@ class Gym_env(gym.Env):
 
     def _get_constrains_memory(self,board):
         # returns all rows, columns and regions on the board
-
         rows = [n.tolist() for n in board]
         cols = [m.tolist() for m in board.T] 
         regions = board.reshape(3,3,3,3).transpose(0,2,1,3).reshape(9,9)
@@ -150,7 +148,6 @@ class Gym_env(gym.Env):
             if value == self.solution[x,y]:
                 state[x,y] = value
                 self.mask[x,y] = False
-                assert action[-1] in range(1,10)
                 true_action = True  
                 reward = 0.2
                 
@@ -216,7 +213,7 @@ class Gym_env(gym.Env):
             return reward,true_action,_state,conflicts   
 
     def step(self,action):
-        assert (action[0] and action[1]) in range(9)
+        # assert (action[0] and action[1]) in range(9)
         self.env_steps+=1
         self.action = action
      
