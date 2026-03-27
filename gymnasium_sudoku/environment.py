@@ -204,18 +204,24 @@ class Gym_env(gym.Env):
         # check completion empty cells on a row,col or region and noarmalize
         _get_completion = lambda x: round((len(x) / 9),2) 
         
-        reward = 0.0
+        reward_ = 0.0
 
         if len(row) == len(np.unique(row)):
-            reward +=  _get_completion(row) 
+            reward_ +=  _get_completion(row) 
         if len(col) == len(np.unique(col)):
-            reward += _get_completion(col) 
+            reward_ += _get_completion(col) 
         if len(block) == len(np.unique(block)):
-            reward +=  _get_completion(block)
+            reward_ +=  _get_completion(block)
 
         reward = (reward - delta_conf) * (1 - scale)
+        
+        info_ = {
+                "conflicts_difference" : delta_conf,
+                "raw_reward" : reward_,
+                "raw_current_empty_cell_count" : curr_empty_cell
+        }
     
-        return reward,true_action,state,delta_conf
+        return reward,true_action,state,info_
 
     def _get_reward(self,env_mode,action,state):  
         if self.env_mode=="biased":
@@ -223,14 +229,14 @@ class Gym_env(gym.Env):
             return reward,true_action,_state,conflicts
 
         elif env_mode=="easy":
-            reward,true_action,_state,conflicts = self._get_easy_mode_reward(action,state)
-            return reward,true_action,_state,conflicts   
+            reward,true_action,_state,info_ = self._get_easy_mode_reward(action,state)
+            return reward,true_action,_state,info_   
 
     def step(self,action):
         self.env_steps+=1
         self.action = action
      
-        reward,true_action,obs,conflicts = self._get_reward(self.env_mode,self.action,self.state)
+        reward,true_action,obs,info_ = self._get_reward(self.env_mode,self.action,self.state)
         self.true_action = true_action
         self.state = obs
 
@@ -239,7 +245,8 @@ class Gym_env(gym.Env):
         if done:
             reward += 81
         info = {
-            "positions_mask":self.mask
+            "positions_mask":self.mask,
+            **info_
         }
         return np.array(self.state,dtype=np.int32),round(reward,3),done,truncated,info
 
