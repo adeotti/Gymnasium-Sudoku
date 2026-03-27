@@ -104,6 +104,7 @@ class Gym_env(gym.Env):
 
         self.state,self.solution = _gen_board(self.env_mode,self.eval_mode)
         self.mask = (self.state==0)
+        self.mask_copy = self.mask.copy()
         self.conflicts = (self.state==0).sum()
 
         # init gui
@@ -114,15 +115,6 @@ class Gym_env(gym.Env):
                 self.app = QApplication([])
             
             self.gui = Gui(deepcopy(self.state),self.env_mode,self.rendering_attention)
-
-    def _get_constrains_memory(self,board):
-        # returns all rows, columns and regions on the board
-        rows = [n.tolist() for n in board]
-        cols = [m.tolist() for m in board.T] 
-        regions = board.reshape(3,3,3,3).transpose(0,2,1,3).reshape(9,9)
-        regions = [a.tolist() for a in regions] 
-        memory = np.concatenate([rows,cols,regions])
-        return memory
 
     def reset(self,seed=None,options=None):
         super().reset(seed=seed)
@@ -137,7 +129,25 @@ class Gym_env(gym.Env):
         
         if self.render_mode =="human":
             self.gui.reset(deepcopy(self.state))
-        return np.array(self.state,dtype=np.int32),{}
+        return np.array(self.state,dtype=np.int32),{"positions_mask":self.mask}
+
+    def _get_constrains_memory(self,board):
+        # returns all rows, columns and regions on a board
+        rows = [n.tolist() for n in board]
+        cols = [m.tolist() for m in board.T] 
+        regions = board.reshape(3,3,3,3).transpose(0,2,1,3).reshape(9,9)
+        regions = [a.tolist() for a in regions] 
+        memory = np.concatenate([rows,cols,regions])
+        return memory
+    
+    def _get_conflicts_count(self,board):
+        # return the number of conflicts on an entire board
+        constrains_memory = self._get_constrains_memory(board)
+        filtered_memory = [liste[liste!=0].tolist() for liste in constrains_memory]
+        conf = 0
+        for arr in filtered_memory:
+            conf+=len(arr) - len(list(set(arr)))
+        return conf
 
     def _get_biased_mode_reward(self,action,state):
         x,y,value = action
@@ -165,43 +175,47 @@ class Gym_env(gym.Env):
     def _get_easy_mode_reward(self,action,state):
         x,y,value = action
         reward = 0
-
-        constrains_memory = self._get_constrains_memory(state)
-        filtered_memory = [liste[liste!=0].tolist() for liste in constrains_memory]
-        conf = 0
-        for arr in filtered_memory:
-            conf+=len(arr) - len(list(set(arr)))
-        conf = round(conf*0.001,3)
-    
-        if not self.mask[x][y]:
-            reward = -0.1 - conf
-            true_action = False
-            return reward,true_action,state,conf
-
-        state[x][y] = value
         true_action = True
+        
+        # early exit when trying to modify frozen cells
+        if not self.mask[x][y]:
+            true_action = False
+            reward = -1.0
+            return reward,true_action,state,0.0
+        
+        # compute conflicts before and after acting on the state
+        conf_before = self._get_conflicts_count(state)
+        state[x][y] = value
+        conf_after = self._get_conflicts_count(state)
+
+        delta_conf = conf_after - conf_before
+
+        # compute current empty cell,normalize to range [0.0,1.0] and round
+        curr_empty_cell = (state == 0).sum()
+        scale = round((curr_empty_cell / 81),2) 
+
         filter_zeros = lambda x : x[x!=0]
         xlist,ylist,block = _get_region(x,y,state)
 
         row = filter_zeros(xlist)
         col = filter_zeros(ylist)
         block = filter_zeros(block)
-        region = np.concatenate((xlist,ylist,block))
         
-        reward = 0
-        if not value in region and len(region)==((3*9)-3):
-            reward += 0.1 - conf 
+        # check completion empty cells on a row,col or region and noarmalize
+        _get_completion = lambda x: round((len(x) / 9),2) 
         
-            if len(row) == len(np.unique(row)) == 8:
-                reward += 0.4
-        
-            if len(col) == len(np.unique(col)) == 8:
-                reward += 0.4
-        
-            if len(block) == len(np.unique(block)) == 8:
-                reward += 0.4
-        
-        return reward,true_action,state,conf
+        reward = 0.0
+
+        if len(row) == len(np.unique(row)):
+            reward +=  _get_completion(row) 
+        if len(col) == len(np.unique(col)):
+            reward += _get_completion(col) 
+        if len(block) == len(np.unique(block)):
+            reward +=  _get_completion(block)
+
+        reward = (reward - delta_conf) * (1 - scale)
+    
+        return reward,true_action,state,delta_conf
 
     def _get_reward(self,env_mode,action,state):  
         if self.env_mode=="biased":
@@ -213,7 +227,6 @@ class Gym_env(gym.Env):
             return reward,true_action,_state,conflicts   
 
     def step(self,action):
-        # assert (action[0] and action[1]) in range(9)
         self.env_steps+=1
         self.action = action
      
@@ -224,9 +237,9 @@ class Gym_env(gym.Env):
         truncated = (self.env_steps>=self.horizon)
         done = np.array_equal(self.state,self.solution)
         if done:
-            reward+=0.2*81
+            reward += 81
         info = {
-            "conflicts":conflicts
+            "positions_mask":self.mask
         }
         return np.array(self.state,dtype=np.int32),round(reward,3),done,truncated,info
 
@@ -237,6 +250,5 @@ class Gym_env(gym.Env):
             self.app.processEvents() 
         else:
             raise ValueError("Set render mode to human before calling .render()")
-
 
 
