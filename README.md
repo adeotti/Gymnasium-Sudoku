@@ -1,3 +1,5 @@
+<img src="./gymnasium_sudoku/media/video_test.gif" width="400"/>
+
 ```
 pip install gymnasium_sudoku
 ```
@@ -58,6 +60,8 @@ for n in range(int(6e3)):
 **Difficulty :** This version allows the policy to corrupt the board during both training and testing. A previously filled cell can be modified with either an incorrect or a correct value as many times as the horizon allows. This characteristic makes learning significantly harder, since the agent is no longer operating in a setting where states only improve. One intuition for designing policies capable of solving this version of the environment is to build a policy that can recover from errors. For example, a policy might benefit from being able to run internal simulations in a latent state or directly in the tangible state before committing to a move. This is just a design intuition; other design philosophies might be even more effective.
 
 **Measuring Learning :** Measuring learning here is quite straightforward and maybe the accent should be put on solving ability instead of speed, of course speed is important but to start, being able to solve different never seen boards from this version of the environment will be a sign of learning.
+
+**Action masking :** In the `info` returned as the result of stepping into the environment, there is a `position_mask` key that can be used as a mask during the computation of the position and make untouchable cells ignored. This should reduce computation cost since no time will be wasted on predicting pre-filled cells.
 
 
 ### data sources:
