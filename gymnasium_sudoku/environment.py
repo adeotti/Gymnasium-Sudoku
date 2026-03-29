@@ -77,13 +77,15 @@ V1_MODES = ["easy"]
 class Gym_env(gym.Env): 
     metadata = {"render_modes":["human"],"render_fps":60,"rendering_attention":False}   
     def __init__(self,
-                 mode,
-                 render_mode=None,
-                 horizon=400,
-                 eval_mode:bool=False,
-                 rendering_attention=False
+         mode,
+         render_mode=None,
+         horizon=400,
+         eval_mode:bool=False,
+         rendering_attention=False
         ):
+
         super().__init__()
+        
         self.env_mode = mode
         self.render_mode = render_mode
         self.horizon = horizon
@@ -107,7 +109,7 @@ class Gym_env(gym.Env):
         self.mask_copy = self.mask.copy()
         self.conflicts = (self.state==0).sum()
 
-        # init gui
+        # initialize the gui
         self.app = None
         if self.render_mode=="human":
             self.app = QApplication.instance()
@@ -127,9 +129,13 @@ class Gym_env(gym.Env):
         self.mask = (self.state==0)
         self.conflicts_memory = []
         
-        if self.render_mode =="human":
+        if self.render_mode == "human":
             self.gui.reset(deepcopy(self.state))
-        return np.array(self.state,dtype=np.int32),{"positions_mask":self.mask}
+
+        info = {
+            "positions_mask" : self.mask
+        }
+        return np.array(self.state,dtype=np.int32),info
 
     def _get_constrains_memory(self,board):
         # returns all rows, columns and regions on a board
@@ -170,18 +176,17 @@ class Gym_env(gym.Env):
             else:
                 reward = -0.1
                 true_action = False
-        return reward,true_action_state,None
+        return reward,true_action,state,{}
         
     def _get_easy_mode_reward(self,action,state):
         x,y,value = action
-        reward = 0
         true_action = True
         
         # early exit when trying to modify frozen cells
         if not self.mask[x][y]:
             true_action = False
             reward = -1.0
-            return reward,true_action,state,0.0
+            return reward,true_action,state,{}
         
         # compute conflicts before and after acting on the state
         conf_before = self._get_conflicts_count(state)
@@ -213,20 +218,20 @@ class Gym_env(gym.Env):
         if len(block) == len(np.unique(block)):
             reward_ +=  _get_completion(block)
 
-        reward = (reward - delta_conf) * (1 - scale)
+        reward = (reward_ - delta_conf) * (1 - scale)
         
         info_ = {
-                "conflicts_difference" : delta_conf,
-                "raw_reward" : reward_,
-                "raw_current_empty_cell_count" : curr_empty_cell
+            "conflicts_difference" : delta_conf,
+            "raw_reward" : reward_,
+            "raw_current_empty_cell_count" : curr_empty_cell
         }
     
         return reward,true_action,state,info_
 
     def _get_reward(self,env_mode,action,state):  
         if self.env_mode=="biased":
-            reward,true_action,_state,conflicts = self._get_biased_mode_reward(action,state)
-            return reward,true_action,_state,conflicts
+            reward,true_action,_state,info_ = self._get_biased_mode_reward(action,state)
+            return reward,true_action,_state,info_
 
         elif env_mode=="easy":
             reward,true_action,_state,info_ = self._get_easy_mode_reward(action,state)
