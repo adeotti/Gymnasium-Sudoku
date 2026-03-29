@@ -1,4 +1,4 @@
-<img src="./gymnasium_sudoku/media/video_test.gif" width="400"/>
+<img src="./gymnasium_sudoku/media/video_test.gif" width="200"/>
 
 ```
 pip install gymnasium_sudoku
